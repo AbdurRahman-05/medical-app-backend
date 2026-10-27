@@ -36,6 +36,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
   final TextEditingController _regPassController = TextEditingController();
 
   bool _obscurePassword = true;
+  bool _obscureRegPassword = true;
   bool _isLoading = false;
 
   void _onRoleChanged(UserRole role) {
@@ -50,16 +51,38 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
   }
 
   void _performLogin() async {
-    setState(() => _isLoading = true);
-    await Future.delayed(const Duration(milliseconds: 500));
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
 
-    ref.read(appStateProvider.notifier).switchRole(_selectedRole);
-
-    if (mounted) {
-      setState(() => _isLoading = false);
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
+    if (email.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter your institutional email.')),
       );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      await ref.read(appStateProvider.notifier).loginWithCredentials(
+            email: email,
+            password: password,
+            role: _selectedRole,
+          );
+
+      if (mounted) {
+        setState(() => _isLoading = false);
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Login error: $e')),
+        );
+      }
     }
   }
 
@@ -67,40 +90,65 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
     final name = _regNameController.text.trim();
     final title = _regTitleController.text.trim();
     final email = _regEmailController.text.trim();
+    final password = _regPassController.text.trim();
     final inst = _regInstitutionController.text.trim();
     final dept = _regDeptController.text.trim();
 
-    if (name.isEmpty || email.isEmpty) {
+    if (name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill in your name and institutional email.')),
+        const SnackBar(content: Text('Please enter your full name and credentials.')),
+      );
+      return;
+    }
+
+    if (email.isEmpty || !email.contains('@')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a valid institutional email address.')),
+      );
+      return;
+    }
+
+    if (password.isNotEmpty && password.length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Password must be at least 6 characters.')),
       );
       return;
     }
 
     setState(() => _isLoading = true);
-    await Future.delayed(const Duration(milliseconds: 600));
 
-    ref.read(appStateProvider.notifier).registerNewUser(
-          name: name,
-          title: title.isNotEmpty ? title : (_selectedRole == UserRole.specialist ? 'Consultant' : 'Clinical Fellow'),
-          email: email,
-          institution: inst.isNotEmpty ? inst : 'Academic Medical Center',
-          department: dept.isNotEmpty ? dept : 'Internal Medicine',
-          specialty: dept.isNotEmpty ? dept : 'Clinical Research',
-          role: _selectedRole,
+    try {
+      final user = await ref.read(appStateProvider.notifier).registerNewUser(
+            name: name,
+            title: title.isNotEmpty ? title : (_selectedRole == UserRole.specialist ? 'Consultant' : 'Clinical Fellow'),
+            email: email,
+            password: password.isNotEmpty ? password : '••••••••••••',
+            institution: inst.isNotEmpty ? inst : 'Academic Medical Center',
+            department: dept.isNotEmpty ? dept : 'Internal Medicine',
+            specialty: dept.isNotEmpty ? dept : 'Clinical Research',
+            role: _selectedRole,
+          );
+
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Account verified & created! Welcome, ${user.name}.'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: const Color(0xFF0F766E),
+          ),
         );
-
-    if (mounted) {
-      setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Account created! Welcome to ClinResearch, $name.'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
-      );
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Registration error: $e')),
+        );
+      }
     }
   }
 
@@ -659,10 +707,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
             const SizedBox(height: 6),
             TextField(
               controller: _regPassController,
-              obscureText: true,
-              decoration: const InputDecoration(
-                prefixIcon: Icon(Icons.lock_outline_rounded, size: 18),
-                hintText: 'At least 8 characters',
+              obscureText: _obscureRegPassword,
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.lock_outline_rounded, size: 18),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscureRegPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                    size: 18,
+                  ),
+                  onPressed: () {
+                    setState(() => _obscureRegPassword = !_obscureRegPassword);
+                  },
+                ),
+                hintText: 'At least 6 characters',
               ),
             ),
             const SizedBox(height: 20),

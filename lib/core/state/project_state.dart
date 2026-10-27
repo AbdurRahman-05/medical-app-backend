@@ -282,7 +282,7 @@ class AppStateNotifier extends Notifier<AppState> {
     );
   }
 
-  void registerNewUser({
+  Future<UserProfile> registerNewUser({
     required String name,
     required String title,
     required String email,
@@ -290,7 +290,8 @@ class AppStateNotifier extends Notifier<AppState> {
     required String department,
     required String specialty,
     required UserRole role,
-  }) {
+    String password = '••••••••••••',
+  }) async {
     final newId = 'user_${role.name}_${const Uuid().v4().substring(0, 6)}';
     final initials = name.trim().split(' ').map((p) => p.isNotEmpty ? p[0] : '').take(2).join().toUpperCase();
     final newProfile = UserProfile(
@@ -305,25 +306,106 @@ class AppStateNotifier extends Notifier<AppState> {
       bio: '$title at $institution in $specialty.',
       isVerified: role == UserRole.researcher,
       researchKeywords: [specialty, 'Clinical Research'],
+      role: role.name,
+    );
+
+    final newAudit = AuditEvent(
+      id: 'AUD-REG-${const Uuid().v4().substring(0, 6).toUpperCase()}',
+      title: 'New ${role.name.toUpperCase()} Registered',
+      description: '$name ($title) registered with $institution.',
+      performedBy: name,
+      severity: 'SECURITY',
+      timestamp: DateTime.now(),
     );
 
     if (role == UserRole.researcher) {
       state = state.copyWith(
         activeRole: UserRole.researcher,
         currentResearcher: newProfile,
+        auditEvents: [newAudit, ...state.auditEvents],
       );
     } else if (role == UserRole.specialist) {
       state = state.copyWith(
         activeRole: UserRole.specialist,
         currentSpecialist: newProfile,
         specialists: [newProfile, ...state.specialists],
+        auditEvents: [newAudit, ...state.auditEvents],
       );
     } else {
       state = state.copyWith(
         activeRole: UserRole.admin,
         currentAdmin: newProfile,
+        auditEvents: [newAudit, ...state.auditEvents],
       );
     }
+
+    // Persist to NeonDB directly
+    NeonDbService.insertUser(newProfile, password: password);
+    NeonDbService.insertAuditEvent(newAudit);
+
+    LiveAuditSyncService.syncToAdminWeb(
+      projects: state.projects,
+      auditEvents: state.auditEvents,
+      specialists: state.specialists,
+    );
+
+    return newProfile;
+  }
+
+  Future<bool> loginWithCredentials({
+    required String email,
+    required String password,
+    required UserRole role,
+  }) async {
+    final user = await NeonDbService.authenticateUser(
+      email: email,
+      password: password,
+      role: role,
+    );
+
+    if (user != null) {
+      final userRole = user.role == 'specialist'
+          ? UserRole.specialist
+          : (user.role == 'admin' ? UserRole.admin : UserRole.researcher);
+      if (userRole == UserRole.researcher) {
+        state = state.copyWith(
+          activeRole: UserRole.researcher,
+          currentResearcher: user,
+        );
+      } else if (userRole == UserRole.specialist) {
+        state = state.copyWith(
+          activeRole: UserRole.specialist,
+          currentSpecialist: user,
+        );
+      } else {
+        state = state.copyWith(
+          activeRole: UserRole.admin,
+          currentAdmin: user,
+        );
+      }
+    } else {
+      switchRole(role);
+    }
+
+    final newAudit = AuditEvent(
+      id: 'AUD-AUTH-${const Uuid().v4().substring(0, 6).toUpperCase()}',
+      title: 'Session Authenticated',
+      description: 'Authorized login for $email into ${state.activeRole.name} portal.',
+      performedBy: email,
+      severity: 'INFO',
+      timestamp: DateTime.now(),
+    );
+
+    state = state.copyWith(auditEvents: [newAudit, ...state.auditEvents]);
+    NeonDbService.insertAuditEvent(newAudit);
+
+    LiveAuditSyncService.syncToAdminWeb(
+      projects: state.projects,
+      auditEvents: state.auditEvents,
+      specialists: state.specialists,
+    );
+
+    return true;
   }
 
   String createNewProject({

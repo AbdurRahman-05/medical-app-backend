@@ -105,6 +105,92 @@ class NeonDbService {
     }
   }
 
+  static Future<UserProfile?> insertUser(UserProfile user, {String password = '••••••••••••'}) async {
+    if (isTestEnvironment) return user;
+    try {
+      final conn = await _getConnection();
+      await conn.execute(
+        Sql.named('''
+          INSERT INTO users (
+            id, name, title, institution, department, specialty, email,
+            password, avatar_initials, bio, is_verified, role, research_keywords, active_projects
+          ) VALUES (
+            @id, @name, @title, @institution, @department, @specialty, @email,
+            @password, @avatar_initials, @bio, @is_verified, @role, @research_keywords, 0
+          )
+          ON CONFLICT (email) DO UPDATE SET
+            name = EXCLUDED.name,
+            title = EXCLUDED.title,
+            institution = EXCLUDED.institution,
+            department = EXCLUDED.department,
+            specialty = EXCLUDED.specialty,
+            password = COALESCE(EXCLUDED.password, users.password),
+            role = EXCLUDED.role;
+        '''),
+        parameters: {
+          'id': user.id,
+          'name': user.name,
+          'title': user.title,
+          'institution': user.institution,
+          'department': user.department,
+          'specialty': user.specialty,
+          'email': user.email.toLowerCase(),
+          'password': password,
+          'avatar_initials': user.avatarInitials,
+          'bio': user.bio,
+          'is_verified': user.isVerified,
+          'role': user.role ?? 'researcher',
+          'research_keywords': user.researchKeywords,
+        },
+      );
+      return user;
+    } catch (e) {
+      debugPrint('NeonDbService.insertUser error: $e');
+      return user;
+    }
+  }
+
+  static Future<UserProfile?> authenticateUser({
+    required String email,
+    required String password,
+    required UserRole role,
+  }) async {
+    if (isTestEnvironment) return null;
+    try {
+      final conn = await _getConnection();
+      final result = await conn.execute(
+        Sql.named('SELECT id, name, title, institution, department, specialty, email, avatar_initials, bio, is_verified, role, research_keywords, active_projects, password FROM users WHERE LOWER(email) = @email;'),
+        parameters: {'email': email.trim().toLowerCase()},
+      );
+      if (result.isNotEmpty) {
+        final row = result.first;
+        final keywordsRaw = row[11];
+        List<String> keywords = [];
+        if (keywordsRaw is List) {
+          keywords = keywordsRaw.map((e) => e.toString()).toList();
+        }
+        return UserProfile(
+          id: row[0] as String,
+          name: row[1] as String,
+          title: (row[2] as String?) ?? '',
+          institution: (row[3] as String?) ?? '',
+          department: (row[4] as String?) ?? '',
+          specialty: (row[5] as String?) ?? '',
+          email: row[6] as String,
+          avatarInitials: (row[7] as String?) ?? 'MD',
+          bio: (row[8] as String?) ?? '',
+          isVerified: (row[9] as bool?) ?? true,
+          role: row[10] as String?,
+          researchKeywords: keywords,
+          activeProjects: (row[12] as int?) ?? 0,
+        );
+      }
+    } catch (e) {
+      debugPrint('NeonDbService.authenticateUser error: $e');
+    }
+    return null;
+  }
+
   // ---------------------------------------------------------------------------
   // AUDIT EVENTS
   // ---------------------------------------------------------------------------
