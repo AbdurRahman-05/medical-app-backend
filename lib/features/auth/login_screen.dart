@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:lottie/lottie.dart';
 import '../../core/models/research_models.dart';
 import '../../core/state/project_state.dart';
 import '../../core/theme/app_theme.dart';
@@ -126,34 +127,46 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // App Brand Icon & Header
+                  // App Brand Animated Mascot & Header
                   Center(
                     child: Container(
-                      width: 54,
-                      height: 54,
+                      width: 130,
+                      height: 130,
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [AppTheme.primaryNavy, Color(0xFF1E3A8A)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
+                        shape: BoxShape.circle,
+                        color: Colors.white,
+                        border: Border.all(
+                          color: const Color(0xFFCBD5E1),
+                          width: 1.5,
                         ),
-                        borderRadius: BorderRadius.circular(14),
                         boxShadow: [
                           BoxShadow(
-                            color: AppTheme.primaryNavy.withValues(alpha: 0.2),
-                            blurRadius: 12,
-                            offset: const Offset(0, 3),
+                            color: AppTheme.accentCyan.withValues(alpha: 0.15),
+                            blurRadius: 16,
+                            offset: const Offset(0, 4),
                           ),
                         ],
                       ),
-                      child: const Icon(
-                        Icons.biotech_rounded,
-                        color: Colors.cyanAccent,
-                        size: 28,
+                      padding: const EdgeInsets.all(8),
+                      child: ClipOval(
+                        child: Lottie.asset(
+                          'assets/animations/Perulogy.json',
+                          fit: BoxFit.contain,
+                          repeat: true,
+                          errorBuilder: (context, error, stackTrace) {
+                            return const Center(
+                              child: Icon(
+                                Icons.biotech_rounded,
+                                color: AppTheme.accentCyan,
+                                size: 48,
+                              ),
+                            );
+                          },
+                        ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
                   Text(
                     'ClinResearch Portal',
                     textAlign: TextAlign.center,
