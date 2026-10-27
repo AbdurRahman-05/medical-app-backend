@@ -5,16 +5,20 @@ class EcgWavePainter extends CustomPainter {
   final double animationValue; // 0.0 to 1.0 sweep
   final Color waveColor;
   final Color gridColor;
+  final bool showGrid;
 
   EcgWavePainter({
     required this.animationValue,
     this.waveColor = const Color(0xFF00F5D4), // Vibrant Neon Mint/Cyan
     this.gridColor = const Color(0x1500F5D4), // Faint grid
+    this.showGrid = false,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
-    _drawGrid(canvas, size);
+    if (showGrid) {
+      _drawGrid(canvas, size);
+    }
     _drawEcgWave(canvas, size);
   }
 

@@ -15,18 +15,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   late AnimationController _ecgController;
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
-  
-  int _statusIndex = 0;
-  Timer? _statusTimer;
   Timer? _navTimer;
-
-  final List<String> _diagnosticSteps = [
-    'Initializing Clinical Scaffolding Engine...',
-    'Connecting to PubMed & Europe PMC Gateway...',
-    'Verifying Institutional Ethics (IEC) Models...',
-    'Calibrating Researcher & Specialist Workspaces...',
-    'System Ready.',
-  ];
 
   @override
   void initState() {
@@ -38,22 +27,15 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
       duration: const Duration(milliseconds: 2200),
     )..repeat();
 
-    // Pulse animation for heart emblem
+    // Pulse animation for heart rhythm
     _pulseController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 850),
+      duration: const Duration(milliseconds: 700),
     )..repeat(reverse: true);
 
-    _pulseAnimation = Tween<double>(begin: 0.94, end: 1.08).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    _pulseAnimation = Tween<double>(begin: 0.88, end: 1.18).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOutBack),
     );
-
-    // Diagnostic text rotation
-    _statusTimer = Timer.periodic(const Duration(milliseconds: 700), (timer) {
-      if (mounted && _statusIndex < _diagnosticSteps.length - 1) {
-        setState(() => _statusIndex++);
-      }
-    });
 
     // Auto-advance to login screen after 3.2 seconds
     _navTimer = Timer(const Duration(milliseconds: 3200), () {
@@ -64,7 +46,6 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   void _goToLogin() {
     if (!mounted) return;
     _navTimer?.cancel();
-    _statusTimer?.cancel();
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         transitionDuration: const Duration(milliseconds: 600),
@@ -80,7 +61,6 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   void dispose() {
     _ecgController.dispose();
     _pulseController.dispose();
-    _statusTimer?.cancel();
     _navTimer?.cancel();
     super.dispose();
   }
@@ -89,93 +69,34 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF080E1A), // Deep surgical navy
-      body: Stack(
-        children: [
-          // Ambient Radial Gradient
-          Positioned.fill(
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: RadialGradient(
-                  center: Alignment(0, -0.2),
-                  radius: 1.2,
-                  colors: [
-                    Color(0xFF0F233D),
-                    Color(0xFF080E1A),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          SafeArea(
-            child: Column(
-              children: [
-                // Top Telemetry Header
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  child: Wrap(
-                    alignment: WrapAlignment.spaceBetween,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    spacing: 8,
-                    runSpacing: 6,
-                    children: [
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: const BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Color(0xFF00F5D4),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'TELEMETRY LIVE',
-                            style: GoogleFonts.inter(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                              color: const Color(0xFF00F5D4),
-                              letterSpacing: 1.2,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.white12),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.favorite, color: Colors.redAccent, size: 12),
-                            const SizedBox(width: 4),
-                            Text(
-                              '72 BPM • LEAD II',
-                              style: GoogleFonts.inter(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white70,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+      body: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: _goToLogin,
+        child: Stack(
+          children: [
+            // Ambient Radial Gradient
+            Positioned.fill(
+              child: Container(
+                decoration: const BoxDecoration(
+                  gradient: RadialGradient(
+                    center: Alignment(0, -0.2),
+                    radius: 1.2,
+                    colors: [
+                      Color(0xFF0F233D),
+                      Color(0xFF080E1A),
                     ],
                   ),
                 ),
+              ),
+            ),
 
-                const Spacer(flex: 1),
+            SafeArea(
+              child: Column(
+                children: [
+                  const Spacer(flex: 2),
 
-                // Pulsing Medical Heart Emblem
-                ScaleTransition(
-                  scale: _pulseAnimation,
-                  child: Container(
+                  // Medical Brand Emblem
+                  Container(
                     width: 84,
                     height: 84,
                     decoration: BoxDecoration(
@@ -199,124 +120,101 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                       size: 44,
                     ),
                   ),
-                ),
 
-                const SizedBox(height: 24),
+                  const SizedBox(height: 24),
 
-                // App Brand Name & Subtitle
-                Text(
-                  'ClinResearch',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Clinical Research & Specialist Collaboration Platform',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w400,
-                    color: const Color(0xFF94A3B8),
-                    letterSpacing: 0.2,
-                  ),
-                ),
-
-                const Spacer(flex: 1),
-
-                // Animated Full-Width ECG Wave Display
-                Container(
-                  height: 140,
-                  width: double.infinity,
-                  margin: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF040810),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0x3300F5D4), width: 1.2),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF00F5D4).withValues(alpha: 0.08),
-                        blurRadius: 16,
-                      ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: AnimatedBuilder(
-                      animation: _ecgController,
-                      builder: (context, child) {
-                        return CustomPaint(
-                          painter: EcgWavePainter(
-                            animationValue: _ecgController.value,
-                            waveColor: const Color(0xFF00F5D4),
-                          ),
-                          child: const SizedBox.expand(),
-                        );
-                      },
+                  // App Brand Name & Subtitle
+                  Text(
+                    'ClinResearch',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 30,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                      letterSpacing: -0.5,
                     ),
                   ),
-                ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Clinical Research & Specialist Collaboration Platform',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w400,
+                      color: const Color(0xFF94A3B8),
+                      letterSpacing: 0.2,
+                    ),
+                  ),
 
-                const Spacer(flex: 2),
+                  const Spacer(flex: 2),
 
-                // Diagnostic Loading Status
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 32),
-                  child: Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const SizedBox(
-                            width: 14,
-                            height: 14,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF00F5D4)),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Flexible(
-                            child: AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 300),
-                              child: Text(
-                                _diagnosticSteps[_statusIndex],
-                                key: ValueKey<int>(_statusIndex),
-                                style: GoogleFonts.inter(
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w500,
-                                  color: Colors.white70,
+                  // Seamless ECG Wave with Centered Beating Heart (No Background Box)
+                  SizedBox(
+                    height: 150,
+                    width: double.infinity,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        // Floating ECG wave without any box or border
+                        Positioned.fill(
+                          child: AnimatedBuilder(
+                            animation: _ecgController,
+                            builder: (context, child) {
+                              return CustomPaint(
+                                painter: EcgWavePainter(
+                                  animationValue: _ecgController.value,
+                                  waveColor: const Color(0xFF00F5D4),
+                                  showGrid: false,
                                 ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                                child: const SizedBox.expand(),
+                              );
+                            },
+                          ),
+                        ),
+
+                        // Beating Heart centered on the wave line
+                        ScaleTransition(
+                          scale: _pulseAnimation,
+                          child: Container(
+                            width: 58,
+                            height: 58,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: const Color(0xFF091424),
+                              border: Border.all(
+                                color: const Color(0xFFFF2E63).withValues(alpha: 0.8),
+                                width: 2,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFFFF2E63).withValues(alpha: 0.5),
+                                  blurRadius: 20,
+                                  spreadRadius: 3,
+                                ),
+                                BoxShadow(
+                                  color: const Color(0xFF00F5D4).withValues(alpha: 0.25),
+                                  blurRadius: 14,
+                                ),
+                              ],
+                            ),
+                            child: const Center(
+                              child: Icon(
+                                Icons.favorite_rounded,
+                                color: Color(0xFFFF2E63),
+                                size: 30,
                               ),
                             ),
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      // Skip / Direct Entry button
-                      TextButton(
-                        onPressed: _goToLogin,
-                        child: Text(
-                          'Skip to Login →',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: const Color(0xFF38BDF8),
-                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 20),
-              ],
+
+                  const Spacer(flex: 3),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
