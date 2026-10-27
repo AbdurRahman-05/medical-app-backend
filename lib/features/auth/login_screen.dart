@@ -141,19 +141,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final mascotHeight = (screenHeight * 0.28).clamp(180.0, 260.0);
+
     return Scaffold(
       backgroundColor: const Color(0xFFE2E8F0), // Cool Slate Backdrop
       body: SafeArea(
         bottom: false,
         child: Column(
           children: [
-            // Top Section: Floating Mascot Animation
+            // Top Section: Floating Mascot Animation (Enlarged)
             Padding(
-              padding: const EdgeInsets.only(top: 8, bottom: 6),
+              padding: const EdgeInsets.only(top: 8, bottom: 4, left: 16, right: 16),
               child: Center(
                 child: SizedBox(
-                  width: 140,
-                  height: 140,
+                  width: double.infinity,
+                  height: mascotHeight,
                   child: Lottie.asset(
                     'assets/animations/Perulogy.json',
                     fit: BoxFit.contain,
@@ -167,7 +170,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                           child: Icon(
                             Icons.biotech_rounded,
                             color: AppTheme.accentCyan,
-                            size: 52,
+                            size: 64,
                           ),
                         ),
                       );
