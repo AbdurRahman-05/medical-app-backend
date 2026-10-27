@@ -127,46 +127,33 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // App Brand Animated Mascot & Header
+                  // App Brand Animated Mascot (Transparent, No Background or Circle)
                   Center(
-                    child: Container(
-                      width: 130,
-                      height: 130,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.white,
-                        border: Border.all(
-                          color: const Color(0xFFCBD5E1),
-                          width: 1.5,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppTheme.accentCyan.withValues(alpha: 0.15),
-                            blurRadius: 16,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      padding: const EdgeInsets.all(8),
-                      child: ClipOval(
-                        child: Lottie.asset(
-                          'assets/animations/Perulogy.json',
-                          fit: BoxFit.contain,
-                          repeat: true,
-                          errorBuilder: (context, error, stackTrace) {
-                            return const Center(
+                    child: SizedBox(
+                      width: 150,
+                      height: 150,
+                      child: Lottie.asset(
+                        'assets/animations/Perulogy.json',
+                        fit: BoxFit.contain,
+                        repeat: true,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Lottie.asset(
+                            'lib/animations/Perulogy.json',
+                            fit: BoxFit.contain,
+                            repeat: true,
+                            errorBuilder: (ctx, err, stack) => const Center(
                               child: Icon(
                                 Icons.biotech_rounded,
                                 color: AppTheme.accentCyan,
-                                size: 48,
+                                size: 52,
                               ),
-                            );
-                          },
-                        ),
+                            ),
+                          );
+                        },
                       ),
                     ),
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 12),
                   Text(
                     'ClinResearch Portal',
                     textAlign: TextAlign.center,
