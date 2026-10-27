@@ -1,0 +1,13 @@
+{
+  "name": "clinresearch-super-admin-web",
+  "version": "1.0.0",
+  "description": "ClinResearch Institutional Governance — Super Admin Web Portal",
+  "scripts": {
+    "dev": "npx -y serve . -p 3000",
+    "start": "npx -y serve . -p 3000",
+    "serve": "npx -y serve . -p 3000"
+  },
+  "keywords": ["clinical", "governance", "super-admin"],
+  "author": "ClinResearch Consortium",
+  "license": "UNLICENSED"
+}

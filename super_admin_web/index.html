@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ClinResearch Institutional Governance — Super Admin Portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+          </svg>
+        </div>
+        <div class="brand-info">
+          <h2>ClinResearch</h2>
+          <span class="badge-admin">SUPER ADMIN WEB</span>
+        </div>
+      </div>
+
+      <div class="user-pill">
+        <div class="user-avatar">AP</div>
+        <div class="user-details">
+          <strong>Dr. Arthur Pendelton</strong>
+          <small>Dean of Clinical Governance & IEC Chair</small>
+        </div>
+      </div>
+
+      <nav class="nav-menu">
+        <span class="nav-section-label">GOVERNANCE MODULES</span>
+        <button class="nav-item active" data-tab="dashboard">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
+          Executive Overview
+        </button>
+        <button class="nav-item" data-tab="specialists">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><polyline points="16 11 18 13 22 9"></polyline></svg>
+          Specialist Vetting & Badges
+          <span class="nav-badge" id="pendingSpecialistBadge">1</span>
+        </button>
+        <button class="nav-item" data-tab="protocols">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+          Protocol & Ethics Oversight
+        </button>
+        <button class="nav-item" data-tab="security">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+          Privacy & PHI Sentinel
+          <span class="nav-badge-green">100%</span>
+        </button>
+        <button class="nav-item" data-tab="audit">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          Traceability & Audit Logs
+        </button>
+
+        <span class="nav-section-label" style="margin-top: 24px;">INSTITUTION</span>
+        <div class="institution-card">
+          <div class="inst-icon">🏛️</div>
+          <div>
+            <strong>Apex Medical Consortium</strong>
+            <small>IRB / IEC Registered #Apex-IEC-2026</small>
+          </div>
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="telemetry-indicator">
+          <span class="pulsing-dot"></span>
+          <span>Sentinel AI Online</span>
+        </div>
+        <small class="version-label">v2.4.0 Institutional Enterprise</small>
+      </div>
+    </aside>
+
+    <!-- Main Content Stage -->
+    <main class="main-content">
+      <!-- Top Action Bar -->
+      <header class="top-bar">
+        <div class="top-bar-title">
+          <h1 id="viewTitle">Executive Governance Overview</h1>
+          <p id="viewSubtitle">Supervisory oversight of clinical research protocols, mentor accreditations, and ethics compliance.</p>
+        </div>
+        <div class="top-bar-actions">
+          <button class="btn btn-secondary" id="refreshDataBtn">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+            Live Sync
+          </button>
+          <button class="btn btn-primary" id="exportAuditReportBtn">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            Export Compliance Dossier
+          </button>
+        </div>
+      </header>
+
+      <!-- Tab View 1: Executive Overview -->
+      <section class="tab-view active" id="tab-dashboard">
+        <!-- Live Action Telemetry Banner -->
+        <div class="live-action-banner" id="liveActionBanner" style="display: flex; align-items: center; justify-content: space-between; background: rgba(6, 182, 212, 0.08); border: 1px solid rgba(6, 182, 212, 0.3); border-radius: 12px; padding: 12px 18px; margin-bottom: 20px;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <span class="pulsing-dot" style="background: var(--accent-cyan); width: 10px; height: 10px; border-radius: 50%; box-shadow: 0 0 10px var(--accent-cyan); display: inline-block;"></span>
+            <div>
+              <div style="font-size: 11px; font-weight: 800; color: var(--accent-cyan); letter-spacing: 0.8px;">● LIVE REAL-TIME APPLICATION EVENT FEED</div>
+              <div id="liveActionText" style="font-size: 13px; color: #fff; font-weight: 600; margin-top: 2px;">Synchronized with ClinResearch Mobile App &amp; Desktop Engine</div>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span id="liveSyncStatus" style="font-size: 11px; color: var(--accent-emerald); font-weight: 600; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); padding: 4px 10px; border-radius: 20px;">● Live Sync Active</span>
+          </div>
+        </div>
+
+        <!-- KPI Metrics Grid -->
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <div class="metric-icon purple">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+            </div>
+            <div class="metric-body">
+              <span class="metric-label">Active Research Studies</span>
+              <h3 class="metric-value" id="kpiStudiesCount">18</h3>
+              <span class="metric-trend positive">+4 this month</span>
+            </div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-icon emerald">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><polyline points="16 11 18 13 22 9"></polyline></svg>
+            </div>
+            <div class="metric-body">
+              <span class="metric-label">Accredited Specialists</span>
+              <h3 class="metric-value" id="kpiSpecialistsCount">4</h3>
+              <span class="metric-trend neutral">1 Pending Review</span>
+            </div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-icon cyan">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+            </div>
+            <div class="metric-body">
+              <span class="metric-label">Ethics Packages Audited</span>
+              <h3 class="metric-value">9</h3>
+              <span class="metric-trend positive">100% Grade 6 Readability</span>
+            </div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-icon amber">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+            </div>
+            <div class="metric-body">
+              <span class="metric-label">PHI Violations Detected</span>
+              <h3 class="metric-value">0</h3>
+              <span class="metric-trend positive">Zero-Breach Certified</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 8-Stage Pipeline Distribution Monitor -->
+        <div class="card pipeline-card">
+          <div class="card-header">
+            <div>
+              <h3>Institutional 8-Stage Research Pipeline Distribution</h3>
+              <p>Real-time census of where clinical resident and fellow studies currently stand.</p>
+            </div>
+            <span class="status-chip active">Live Telemetry</span>
+          </div>
+          <div class="pipeline-flow" id="pipelineDistribution">
+            <!-- Dynamically populated via JS -->
+          </div>
+        </div>
+
+        <!-- Two Column Governance Panels -->
+        <div class="grid-2col">
+          <!-- Pending Specialist Approvals -->
+          <div class="card">
+            <div class="card-header">
+              <h3>Doctor Credentialing & Vetting Queue</h3>
+              <button class="btn-text" onclick="switchTab('specialists')">View All →</button>
+            </div>
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Doctor / Specialist</th>
+                    <th>Medical Council / License</th>
+                    <th>Specialty</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="quickSpecialistTable">
+                  <!-- Populated via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Live Compliance Feed -->
+          <div class="card">
+            <div class="card-header">
+              <h3>Institutional Audit & Compliance Stream</h3>
+              <button class="btn-text" onclick="switchTab('audit')">Full Audit Trail →</button>
+            </div>
+            <div class="audit-feed" id="quickAuditFeed">
+              <!-- Populated via JS -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tab View 2: Specialist Vetting & Badges -->
+      <section class="tab-view" id="tab-specialists">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h3>Specialist Accreditation Directory</h3>
+              <p>Verify doctor medical licenses, clinical specialties, and Institutional Ethics Committee eligibility.</p>
+            </div>
+            <div class="search-box">
+              <input type="text" id="specialistSearchInput" placeholder="Filter by doctor name, license, or specialty...">
+            </div>
+          </div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Clinician</th>
+                  <th>Department & Institution</th>
+                  <th>License / Registration</th>
+                  <th>Clinical Focus</th>
+                  <th>Status</th>
+                  <th>Governance Action</th>
+                </tr>
+              </thead>
+              <tbody id="fullSpecialistTable">
+                <!-- Populated via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tab View 3: Protocol & Ethics Oversight -->
+      <section class="tab-view" id="tab-protocols">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h3>Institutional Research Protocol Registry</h3>
+              <p>End-to-end auditability of active clinical protocols, mentor reviews, and IEC submission packages.</p>
+            </div>
+            <div class="search-box">
+              <input type="text" id="protocolSearchInput" placeholder="Search protocol titles, PIs, or areas...">
+            </div>
+          </div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Protocol Title</th>
+                  <th>Principal Investigator</th>
+                  <th>Specialist Guide</th>
+                  <th>Current Stage</th>
+                  <th>Version</th>
+                  <th>IEC Package</th>
+                  <th>Audit Dossier</th>
+                </tr>
+              </thead>
+              <tbody id="protocolRegistryTable">
+                <!-- Populated via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tab View 4: Privacy & PHI Sentinel -->
+      <section class="tab-view" id="tab-security">
+        <div class="grid-2col">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <h3>Automated PHI / PII Privacy Scanners</h3>
+                <p>Client and server-side Named Entity Recognition (NER) preventing identifiable patient health information.</p>
+              </div>
+              <span class="status-chip active">Active Sentinel</span>
+            </div>
+            <div class="sentinel-metrics">
+              <div class="sentinel-box">
+                <span class="s-label">Regex Patterns Enforced</span>
+                <span class="s-val">42 Medical Rules</span>
+                <small>MRNs, Social IDs, Dates of Birth, Contact records</small>
+              </div>
+              <div class="sentinel-box">
+                <span class="s-label">Prompts Scrubbed</span>
+                <span class="s-val">1,248 Prompts</span>
+                <small>100% pre-filtered before LLM inference</small>
+              </div>
+              <div class="sentinel-box">
+                <span class="s-label">Data Redactions Applied</span>
+                <span class="s-val">0 High-Risk Leaks</span>
+                <small>Safe Harbor de-identification compliant</small>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3>Institutional Compliance Disclaimers</h3>
+            </div>
+            <div class="compliance-checklist">
+              <div class="comp-item">
+                <span class="check-icon">✓</span>
+                <div>
+                  <strong>Non-Diagnostic Instrument Declaration</strong>
+                  <p>All AI companions and research calculators strictly declared as research-planning aids, not Clinical Decision Support Systems (CDSS).</p>
+                </div>
+              </div>
+              <div class="comp-item">
+                <span class="check-icon">✓</span>
+                <div>
+                  <strong>Ground Truth Literature Grounding</strong>
+                  <p>PubMed and Europe PMC E-utilities integration active to prevent fabricated citations.</p>
+                </div>
+              </div>
+              <div class="comp-item">
+                <span class="check-icon">✓</span>
+                <div>
+                  <strong>Non-Destructive Version Branching</strong>
+                  <p>Revisions create immutable version trees (v1.0 → v1.1) for complete IRB / IEC review auditability.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tab View 5: Traceability & Audit Logs -->
+      <section class="tab-view" id="tab-audit">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h3>Institutional Immutable Audit Trail</h3>
+              <p>Cryptographically verifiable event log of all stage advancements, reviewer sign-offs, and data exports.</p>
+            </div>
+            <button class="btn btn-secondary" onclick="exportAuditJson()">Export Audit JSON</button>
+          </div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Event ID</th>
+                  <th>Timestamp</th>
+                  <th>Milestone / Activity</th>
+                  <th>Description</th>
+                  <th>Operator</th>
+                  <th>Severity</th>
+                </tr>
+              </thead>
+              <tbody id="fullAuditLogTable">
+                <!-- Populated via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Modal: View Protocol Dossier -->
+  <div class="modal-overlay" id="protocolModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div>
+          <span class="badge-modal">ETHICS & METHODOLOGY AUDIT</span>
+          <h2 id="modalProtocolTitle">Protocol Dossier</h2>
+        </div>
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+      </div>
+      <div class="modal-body" id="modalProtocolBody">
+        <!-- Injected via JS -->
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+        <button class="btn btn-primary" onclick="alert('Audit stamp applied to institutional dossier.')">Endorse Audit Stamp</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/live_data.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

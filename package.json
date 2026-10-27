@@ -1,0 +1,17 @@
+{
+  "name": "clinresearch-backend-api",
+  "version": "1.0.0",
+  "description": "ClinResearch Multi-Center Clinical Research Collaboration Backend API",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "clean-db": "node scripts/clean_db.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.9",
+    "express": "^5.3.0",
+    "pg": "^8.23.1"
+  }
+}
