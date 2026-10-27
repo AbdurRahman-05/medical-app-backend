@@ -270,6 +270,37 @@ app.post('/api/chat/:projectId', async (req, res) => {
 // ---------------------------------------------------------------------------
 // LIVE SYNC ENDPOINT (FOR SUPER ADMIN PORTAL)
 // ---------------------------------------------------------------------------
+// In-memory real-time telemetry buffer
+let livePushCache = null;
+
+app.post('/api/live-sync-push', async (req, res) => {
+  try {
+    const data = req.body;
+    livePushCache = {
+      ...data,
+      receivedAt: Date.now(),
+    };
+
+    // If incoming auditEvents present, persist newest to database
+    if (Array.isArray(data.auditEvents) && data.auditEvents.length > 0) {
+      for (const ev of data.auditEvents.slice(0, 5)) {
+        if (ev && ev.id && ev.title) {
+          pool.query(
+            `INSERT INTO audit_events (id, title, description, performed_by, severity, timestamp)
+             VALUES ($1, $2, $3, $4, $5, NOW())
+             ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, description = EXCLUDED.description, timestamp = EXCLUDED.timestamp`,
+            [ev.id, ev.title, ev.description || '', ev.operator || 'Mobile App', ev.severity || 'INFO']
+          ).catch(() => {});
+        }
+      }
+    }
+
+    res.json({ success: true, timestamp: new Date().toISOString() });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/live-sync', async (req, res) => {
   try {
     const projectsRes = await pool.query('SELECT * FROM projects ORDER BY last_updated DESC');
@@ -296,36 +327,56 @@ app.get('/api/live-sync', async (req, res) => {
       };
     });
 
+    let dbProtocols = projectsRes.rows.map((p) => {
+      let plan = {};
+      try {
+        plan = typeof p.study_plan === 'string' ? JSON.parse(p.study_plan) : (p.study_plan || {});
+      } catch (_) {}
+
+      return {
+        id: p.id,
+        title: p.title,
+        pi: p.owner_name || 'Dr. Sarah Lin, MD',
+        mentor: p.assigned_specialist_name || 'Awaiting Specialist Guide',
+        stage: `0${p.current_stage} · Stage 0${p.current_stage}`,
+        stageNum: p.current_stage,
+        version: 'v1.0 (Live)',
+        iecStatus: p.current_stage >= 7 ? 'Checklist Ready (7/7 Validated)' : 'Pending Protocol Gate',
+        sampleSize: plan.sampleSizeTarget || 120,
+        readability: 'Grade 6.2 (Plain Language)',
+      };
+    });
+
+    let dbAudits = auditsRes.rows.map((a) => ({
+      id: a.id,
+      timestamp: new Date(a.timestamp).toISOString().replace('T', ' ').substring(0, 19),
+      title: a.title,
+      description: a.description,
+      operator: a.performed_by,
+      severity: a.severity,
+    }));
+
+    // If fresh mobile push telemetry was received recently, merge it
+    if (livePushCache && (Date.now() - livePushCache.receivedAt) < 120000) {
+      if (Array.isArray(livePushCache.protocols) && livePushCache.protocols.length > 0) {
+        dbProtocols = livePushCache.protocols;
+      }
+      if (Array.isArray(livePushCache.auditEvents) && livePushCache.auditEvents.length > 0) {
+        const seenIds = new Set(livePushCache.auditEvents.map((a) => a.id));
+        dbAudits = [
+          ...livePushCache.auditEvents,
+          ...dbAudits.filter((a) => !seenIds.has(a.id)),
+        ];
+      }
+    }
+
     const payload = {
       lastSync: new Date().toISOString().replace('T', ' ').substring(0, 19),
-      protocols: projectsRes.rows.map((p) => {
-        let plan = {};
-        try {
-          plan = typeof p.study_plan === 'string' ? JSON.parse(p.study_plan) : (p.study_plan || {});
-        } catch (_) {}
-
-        return {
-          id: p.id,
-          title: p.title,
-          pi: p.owner_name || 'Dr. Sarah Lin, MD',
-          mentor: p.assigned_specialist_name || 'Awaiting Specialist Guide',
-          stage: `0${p.current_stage} · Stage 0${p.current_stage}`,
-          stageNum: p.current_stage,
-          version: 'v1.0 (Live)',
-          iecStatus: p.current_stage >= 7 ? 'Checklist Ready (7/7 Validated)' : 'Pending Protocol Gate',
-          sampleSize: plan.sampleSizeTarget || 120,
-          readability: 'Grade 6.2 (Plain Language)',
-        };
-      }),
-      auditEvents: auditsRes.rows.map((a) => ({
-        id: a.id,
-        timestamp: new Date(a.timestamp).toISOString().replace('T', ' ').substring(0, 19),
-        title: a.title,
-        description: a.description,
-        operator: a.performed_by,
-        severity: a.severity,
-      })),
-      pipelineDistribution: distribution,
+      protocols: dbProtocols,
+      auditEvents: dbAudits,
+      pipelineDistribution: (livePushCache && Array.isArray(livePushCache.pipelineDistribution) && livePushCache.protocols && livePushCache.protocols.length > 0)
+        ? livePushCache.pipelineDistribution
+        : distribution,
     };
 
     res.json(payload);

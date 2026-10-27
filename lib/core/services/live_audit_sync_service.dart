@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import '../models/research_models.dart';
 
 class LiveAuditSyncService {
@@ -87,8 +88,26 @@ class LiveAuditSyncService {
           break;
         }
       }
+
+      // 3. HTTP Push to Backend API (both local server and cloud on Render)
+      _pushHttpAsync(jsonString);
     } catch (e) {
       debugPrint('LiveAuditSyncService error: $e');
+    }
+  }
+
+  static void _pushHttpAsync(String jsonPayload) {
+    final urls = [
+      'http://localhost:5000/api/live-sync-push',
+      'https://medical-app-backend-tovg.onrender.com/api/live-sync-push',
+    ];
+
+    for (final url in urls) {
+      http.post(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonPayload,
+      ).catchError((_) => http.Response('', 500));
     }
   }
 }
