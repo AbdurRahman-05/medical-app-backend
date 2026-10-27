@@ -141,22 +141,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
 
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
-    final mascotHeight = (screenHeight * 0.28).clamp(180.0, 260.0);
-
     return Scaffold(
       backgroundColor: const Color(0xFFE2E8F0), // Cool Slate Backdrop
       body: SafeArea(
         bottom: false,
         child: Column(
           children: [
-            // Top Section: Floating Mascot Animation (Enlarged)
+            // Top Section: Floating Mascot Animation
             Padding(
-              padding: const EdgeInsets.only(top: 8, bottom: 4, left: 16, right: 16),
+              padding: const EdgeInsets.only(top: 8, bottom: 6),
               child: Center(
                 child: SizedBox(
-                  width: double.infinity,
-                  height: mascotHeight,
+                  width: 140,
+                  height: 140,
                   child: Lottie.asset(
                     'assets/animations/Perulogy.json',
                     fit: BoxFit.contain,
@@ -170,7 +167,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                           child: Icon(
                             Icons.biotech_rounded,
                             color: AppTheme.accentCyan,
-                            size: 64,
+                            size: 52,
                           ),
                         ),
                       );
@@ -254,24 +251,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                                     _buildSignInCard()
                                   else
                                     _buildCreateAccountCard(),
-
-                                  const SizedBox(height: 16),
-
-                                  // SSO Button
-                                  OutlinedButton.icon(
-                                    onPressed: _performLogin,
-                                    icon: const Icon(Icons.vpn_key_outlined, size: 16, color: AppTheme.primaryNavy),
-                                    label: const Text(
-                                      'Institutional SSO / ORCID Login',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    style: OutlinedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-                                      backgroundColor: const Color(0xFFF8FAFC),
-                                      side: const BorderSide(color: Color(0xFFE2E8F0)),
-                                    ),
-                                  ),
                                 ],
                               ),
                             ),
