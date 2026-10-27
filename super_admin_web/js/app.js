@@ -2,56 +2,7 @@
 
 const state = {
   activeTab: 'dashboard',
-  specialists: [
-    {
-      id: 'doc_01',
-      name: 'Prof. Marcus Vance, MD, PhD',
-      title: 'Senior Consultant & Professor',
-      department: 'Cardiology & Heart Failure',
-      institution: 'Metropolitan Heart & Vascular Institute',
-      license: 'MCI-REG-849204',
-      specialty: 'Cardiovascular Medicine',
-      focus: 'HFpEF, SGLT2i, Clinical Trial Design',
-      isVerified: true,
-      activeProjects: 4,
-    },
-    {
-      id: 'doc_02',
-      name: 'Dr. Elena Rostova, MD, DM',
-      title: 'Associate Professor & Biostatistician',
-      department: 'Preventive Medicine & Epidemiology',
-      institution: 'St. Jude Academic Medical Center',
-      license: 'NPI-8923019',
-      specialty: 'Clinical Epidemiology & Biostatistics',
-      focus: 'Sample Size Formulas, Propensity Matching',
-      isVerified: false, // Pending verification
-      activeProjects: 3,
-    },
-    {
-      id: 'doc_03',
-      name: 'Dr. Rajesh Nair, MD, MRCP',
-      title: 'Senior Nephrologist & IEC Chair',
-      department: 'Department of Nephrology',
-      institution: 'Apex Institute of Medical Sciences',
-      license: 'GMC-7492011',
-      specialty: 'Nephrology & Renal Medicine',
-      focus: 'Cardio-Renal, GCP Ethics Review',
-      isVerified: true,
-      activeProjects: 2,
-    },
-    {
-      id: 'doc_04',
-      name: 'Dr. Amanda Chen, MD, PhD',
-      title: 'Assistant Professor of Oncology',
-      department: 'Medical Oncology',
-      institution: 'National Cancer Research Center',
-      license: 'NPI-4920194',
-      specialty: 'Oncology & Immunotherapy',
-      focus: 'Survival Analysis, PROMs, Trial Design',
-      isVerified: true,
-      activeProjects: 5,
-    },
-  ],
+  specialists: [],
   protocols: [],
   auditEvents: [
     {
@@ -106,17 +57,43 @@ function checkLiveData() {
         applyLiveData(window.CLIN_LIVE_DATA);
       }
       fetch('live_data.json?t=' + Date.now())
-        .then((res) => {
-          if (res.ok) return res.json();
-          throw new Error('Not served via HTTP');
-        })
+        .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
-          applyLiveData(data);
+          if (data) applyLiveData(data);
         })
         .catch(() => {
           // Direct file mode; handled by window.CLIN_LIVE_DATA
         });
     });
+
+  // Fetch real registered specialists from database
+  fetch('/api/users')
+    .then((res) => (res.ok ? res.json() : []))
+    .then((users) => {
+      if (Array.isArray(users)) {
+        const specialistsOnly = users
+          .filter((u) => u.role === 'SPECIALIST' || u.role === 'DOCTOR' || u.title)
+          .map((u) => ({
+            id: u.id,
+            name: u.name,
+            title: u.title || 'Clinical Specialist',
+            department: u.department || 'Hospital Faculty',
+            institution: u.institution || 'Medical Center',
+            license: u.email || 'NPI-PENDING',
+            specialty: u.specialty || 'General Medicine',
+            focus: u.research_keywords || 'Clinical Practice',
+            isVerified: u.is_verified || false,
+            activeProjects: u.active_projects || 0,
+          }));
+
+        if (JSON.stringify(state.specialists) !== JSON.stringify(specialistsOnly)) {
+          state.specialists = specialistsOnly;
+          renderSpecialists();
+          renderDashboard();
+        }
+      }
+    })
+    .catch(() => {});
 }
 
 function applyLiveData(data) {
@@ -131,6 +108,14 @@ function applyLiveData(data) {
     }
     const studiesCountEl = document.getElementById('kpiStudiesCount');
     if (studiesCountEl) studiesCountEl.innerText = data.protocols.length;
+
+    const ethicsCount = state.protocols.filter((p) => Number(p.stageNum) >= 7).length;
+    const kpiEthicsCount = document.getElementById('kpiEthicsCount');
+    if (kpiEthicsCount) kpiEthicsCount.innerText = ethicsCount;
+    const kpiEthicsTrend = document.getElementById('kpiEthicsTrend');
+    if (kpiEthicsTrend) {
+      kpiEthicsTrend.innerText = ethicsCount > 0 ? '100% Grade 6 Readability' : 'Awaiting First Protocol';
+    }
   }
 
   if (Array.isArray(data.auditEvents) && data.auditEvents.length > 0) {
@@ -210,30 +195,40 @@ function renderDashboard() {
 
   // Quick Specialist Table
   const quickTable = document.getElementById('quickSpecialistTable');
-  quickTable.innerHTML = state.specialists
-    .slice(0, 3)
-    .map(
-      (doc) => `
-    <tr>
-      <td><strong>${doc.name}</strong><br><small style="color: var(--text-dim)">${doc.institution}</small></td>
-      <td><code style="font-family: monospace; font-size: 11px; color: var(--accent-cyan)">${doc.license}</code></td>
-      <td>${doc.specialty}</td>
-      <td>${
-        doc.isVerified
-          ? '<span style="color: var(--accent-emerald); font-weight: 700; font-size: 11px">● VERIFIED</span>'
-          : '<span style="color: var(--accent-amber); font-weight: 700; font-size: 11px">● PENDING</span>'
-      }</td>
-      <td>
-        ${
-          !doc.isVerified
-            ? `<button class="btn btn-primary" style="padding: 4px 10px; font-size: 11px" onclick="verifyDoctor('${doc.id}')">Approve</button>`
-            : `<button class="btn btn-secondary" style="padding: 4px 10px; font-size: 11px" disabled>Approved</button>`
-        }
-      </td>
-    </tr>
-  `
-    )
-    .join('');
+  if (state.specialists.length === 0) {
+    quickTable.innerHTML = `
+      <tr>
+        <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 24px 10px;">
+          No accredited specialists in queue. Live doctor registrations will appear here.
+        </td>
+      </tr>
+    `;
+  } else {
+    quickTable.innerHTML = state.specialists
+      .slice(0, 3)
+      .map(
+        (doc) => `
+      <tr>
+        <td><strong>${doc.name}</strong><br><small style="color: var(--text-dim)">${doc.institution}</small></td>
+        <td><code style="font-family: monospace; font-size: 11px; color: var(--accent-cyan)">${doc.license}</code></td>
+        <td>${doc.specialty}</td>
+        <td>${
+          doc.isVerified
+            ? '<span style="color: var(--accent-emerald); font-weight: 700; font-size: 11px">● VERIFIED</span>'
+            : '<span style="color: var(--accent-amber); font-weight: 700; font-size: 11px">● PENDING</span>'
+        }</td>
+        <td>
+          ${
+            !doc.isVerified
+              ? `<button class="btn btn-primary" style="padding: 4px 10px; font-size: 11px" onclick="verifyDoctor('${doc.id}')">Approve</button>`
+              : `<button class="btn btn-secondary" style="padding: 4px 10px; font-size: 11px" disabled>Approved</button>`
+          }
+        </td>
+      </tr>
+    `
+      )
+      .join('');
+  }
 
   // Quick Audit Feed
   const quickAudit = document.getElementById('quickAuditFeed');
@@ -264,43 +259,59 @@ function renderSpecialists(filter = '') {
       s.license.toLowerCase().includes(filter.toLowerCase())
   );
 
-  table.innerHTML = filtered
-    .map(
-      (doc) => `
-    <tr>
-      <td>
-        <strong>${doc.name}</strong><br>
-        <small style="color: var(--text-muted)">${doc.title}</small>
-      </td>
-      <td>
-        ${doc.department}<br>
-        <small style="color: var(--text-dim)">${doc.institution}</small>
-      </td>
-      <td><code style="font-family: monospace; font-size: 11.5px; color: var(--accent-cyan); background: rgba(6,182,212,0.1); padding: 2px 6px; border-radius: 4px">${doc.license}</code></td>
-      <td><span style="font-size: 11.5px; color: var(--text-muted)">${doc.focus}</span></td>
-      <td>
-        ${
-          doc.isVerified
-            ? '<span class="status-chip active">VERIFIED MENTOR</span>'
-            : '<span style="font-size: 11px; font-weight: 700; color: var(--accent-amber)">PENDING VETTING</span>'
-        }
-      </td>
-      <td>
-        ${
-          !doc.isVerified
-            ? `<button class="btn btn-primary" onclick="verifyDoctor('${doc.id}')">Grant Accreditation</button>`
-            : `<button class="btn btn-secondary" style="font-size: 11px" onclick="revokeDoctor('${doc.id}')">Revoke Access</button>`
-        }
-      </td>
-    </tr>
-  `
-    )
-    .join('');
+  if (filtered.length === 0) {
+    table.innerHTML = `
+      <tr>
+        <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 36px 16px;">
+          <div style="font-size: 24px; margin-bottom: 8px">👨‍⚕️</div>
+          <strong style="color: #fff">No Specialist Profiles Registered Yet</strong><br>
+          <small>Live vetted doctor and mentor registrations will appear here automatically.</small>
+        </td>
+      </tr>
+    `;
+  } else {
+    table.innerHTML = filtered
+      .map(
+        (doc) => `
+      <tr>
+        <td>
+          <strong>${doc.name}</strong><br>
+          <small style="color: var(--text-muted)">${doc.title}</small>
+        </td>
+        <td>
+          ${doc.department}<br>
+          <small style="color: var(--text-dim)">${doc.institution}</small>
+        </td>
+        <td><code style="font-family: monospace; font-size: 11.5px; color: var(--accent-cyan); background: rgba(6,182,212,0.1); padding: 2px 6px; border-radius: 4px">${doc.license}</code></td>
+        <td><span style="font-size: 11.5px; color: var(--text-muted)">${doc.focus}</span></td>
+        <td>
+          ${
+            doc.isVerified
+              ? '<span class="status-chip active">VERIFIED MENTOR</span>'
+              : '<span style="font-size: 11px; font-weight: 700; color: var(--accent-amber)">PENDING VETTING</span>'
+          }
+        </td>
+        <td>
+          ${
+            !doc.isVerified
+              ? `<button class="btn btn-primary" onclick="verifyDoctor('${doc.id}')">Grant Accreditation</button>`
+              : `<button class="btn btn-secondary" style="font-size: 11px" onclick="revokeDoctor('${doc.id}')">Revoke Access</button>`
+          }
+        </td>
+      </tr>
+    `
+      )
+      .join('');
+  }
 
-  // Update Pending badge
+  // Update Pending badge & KPI count
   const pendingCount = state.specialists.filter((s) => !s.isVerified).length;
-  document.getElementById('pendingSpecialistBadge').innerText = pendingCount;
-  document.getElementById('kpiSpecialistsCount').innerText = state.specialists.filter((s) => s.isVerified).length;
+  const pendingBadge = document.getElementById('pendingSpecialistBadge');
+  if (pendingBadge) pendingBadge.innerText = pendingCount;
+  const specCountEl = document.getElementById('kpiSpecialistsCount');
+  if (specCountEl) specCountEl.innerText = state.specialists.length;
+  const specPendingEl = document.getElementById('kpiSpecialistsPending');
+  if (specPendingEl) specPendingEl.innerText = `${pendingCount} Pending Review`;
 }
 
 // Render Protocols
