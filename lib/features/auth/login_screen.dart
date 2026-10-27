@@ -22,10 +22,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
   bool _isCreateAccountMode = false;
   UserRole _selectedRole = UserRole.researcher;
 
-  // Sign In controllers
-  final TextEditingController _emailController = TextEditingController(text: 'sarah.lin@apexmed.edu');
-  final TextEditingController _passwordController = TextEditingController(text: '••••••••••••');
-  final TextEditingController _regIdController = TextEditingController(text: 'MCI-REG-849204');
+  // Sign In controllers - clean empty defaults (no demo hardcoding)
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _regIdController = TextEditingController();
 
   // Create Account controllers
   final TextEditingController _regNameController = TextEditingController();
@@ -42,21 +42,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
   void _onRoleChanged(UserRole role) {
     setState(() {
       _selectedRole = role;
-      if (role == UserRole.researcher) {
-        _emailController.text = 'sarah.lin@apexmed.edu';
-      } else {
-        _emailController.text = 'm.vance@metroheart.org';
-      }
     });
   }
 
   void _performLogin() async {
-    final email = _emailController.text.trim();
+    final identifier = _emailController.text.trim();
     final password = _passwordController.text;
 
-    if (email.isEmpty) {
+    if (identifier.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter your institutional email.')),
+        const SnackBar(
+          content: Text('Please enter your name, username, or institutional email.'),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+        ),
       );
       return;
     }
@@ -64,23 +63,45 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
     setState(() => _isLoading = true);
 
     try {
-      await ref.read(appStateProvider.notifier).loginWithCredentials(
-            email: email,
+      final success = await ref.read(appStateProvider.notifier).loginWithCredentials(
+            email: identifier,
             password: password,
             role: _selectedRole,
           );
 
       if (mounted) {
         setState(() => _isLoading = false);
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-        );
+        if (success) {
+          final currentUser = ref.read(appStateProvider).currentUser;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Welcome, ${currentUser.name}!'),
+              behavior: SnackBarBehavior.floating,
+              backgroundColor: const Color(0xFF0F766E),
+            ),
+          );
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const HomeScreen()),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Invalid username/email or password. Please verify and try again.'),
+              backgroundColor: Colors.redAccent,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Login error: $e')),
+          SnackBar(
+            content: Text('Login error: $e'),
+            backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating,
+          ),
         );
       }
     }
@@ -512,9 +533,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
             ),
             const SizedBox(height: 14),
 
-            // Email Field
+            // Username or Email Field
             Text(
-              'Institutional Medical Email',
+              'Username or Institutional Email',
               style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 6),
@@ -522,8 +543,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
               controller: _emailController,
               keyboardType: TextInputType.emailAddress,
               decoration: const InputDecoration(
-                prefixIcon: Icon(Icons.email_outlined, size: 18),
-                hintText: 'name@hospital.edu',
+                prefixIcon: Icon(Icons.person_outline_rounded, size: 18),
+                hintText: 'Enter name or email (e.g. Abdur)',
               ),
             ),
             const SizedBox(height: 14),
@@ -571,7 +592,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                     setState(() => _obscurePassword = !_obscurePassword);
                   },
                 ),
-                hintText: '••••••••',
+                hintText: 'Enter your password',
               ),
             ),
             const SizedBox(height: 20),

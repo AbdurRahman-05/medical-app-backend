@@ -153,9 +153,9 @@ class AppStateNotifier extends Notifier<AppState> {
       UserProfile admin = state.currentAdmin;
 
       for (final u in liveUsers) {
-        if (u.id == 'user_res_01') researcher = u;
-        if (u.id == 'user_spec_01') specialist = u;
-        if (u.id == 'user_admin_01') admin = u;
+        if (u.id == state.currentResearcher.id) researcher = u;
+        if (u.id == state.currentSpecialist.id) specialist = u;
+        if (u.id == state.currentAdmin.id) admin = u;
       }
 
       state = state.copyWith(
@@ -363,35 +363,36 @@ class AppStateNotifier extends Notifier<AppState> {
       role: role,
     );
 
-    if (user != null) {
-      final userRole = user.role == 'specialist'
-          ? UserRole.specialist
-          : (user.role == 'admin' ? UserRole.admin : UserRole.researcher);
-      if (userRole == UserRole.researcher) {
-        state = state.copyWith(
-          activeRole: UserRole.researcher,
-          currentResearcher: user,
-        );
-      } else if (userRole == UserRole.specialist) {
-        state = state.copyWith(
-          activeRole: UserRole.specialist,
-          currentSpecialist: user,
-        );
-      } else {
-        state = state.copyWith(
-          activeRole: UserRole.admin,
-          currentAdmin: user,
-        );
-      }
+    if (user == null) {
+      // Login failed - return false and DO NOT fallback to demo account!
+      return false;
+    }
+
+    final userRole = user.role == 'specialist'
+        ? UserRole.specialist
+        : (user.role == 'admin' ? UserRole.admin : UserRole.researcher);
+    if (userRole == UserRole.researcher) {
+      state = state.copyWith(
+        activeRole: UserRole.researcher,
+        currentResearcher: user,
+      );
+    } else if (userRole == UserRole.specialist) {
+      state = state.copyWith(
+        activeRole: UserRole.specialist,
+        currentSpecialist: user,
+      );
     } else {
-      switchRole(role);
+      state = state.copyWith(
+        activeRole: UserRole.admin,
+        currentAdmin: user,
+      );
     }
 
     final newAudit = AuditEvent(
       id: 'AUD-AUTH-${const Uuid().v4().substring(0, 6).toUpperCase()}',
       title: 'Session Authenticated',
-      description: 'Authorized login for $email into ${state.activeRole.name} portal.',
-      performedBy: email,
+      description: 'Authorized login for ${user.name} (${user.email}) into ${state.activeRole.name} portal.',
+      performedBy: user.name,
       severity: 'INFO',
       timestamp: DateTime.now(),
     );

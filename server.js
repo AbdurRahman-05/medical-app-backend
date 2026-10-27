@@ -71,6 +71,37 @@ app.get('/api/users', async (req, res) => {
   }
 });
 
+app.post('/api/login', async (req, res) => {
+  try {
+    const { identifier, email, password } = req.body;
+    const input = (identifier || email || '').trim().toLowerCase();
+    const pass = (password || '').trim();
+
+    if (!input) {
+      return res.status(400).json({ error: 'Username or email is required.' });
+    }
+
+    const result = await pool.query(
+      'SELECT id, name, title, institution, department, specialty, email, avatar_initials, bio, is_verified, role, research_keywords, active_projects, password FROM users WHERE LOWER(email) = $1 OR LOWER(name) = $1 OR LOWER(id) = $1',
+      [input]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(401).json({ error: 'User not found. Please verify your username or email.' });
+    }
+
+    const user = result.rows[0];
+    if (user.password && user.password !== '••••••••••••' && pass && user.password !== pass) {
+      return res.status(401).json({ error: 'Incorrect password.' });
+    }
+
+    delete user.password;
+    res.json({ success: true, user });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post(['/api/users', '/api/register'], async (req, res) => {
   try {
     const {

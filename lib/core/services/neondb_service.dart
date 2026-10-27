@@ -155,15 +155,27 @@ class NeonDbService {
     required String password,
     required UserRole role,
   }) async {
-    if (isTestEnvironment) return null;
+    final cleanInput = email.trim();
+    final cleanPass = password.trim();
+
     try {
       final conn = await _getConnection();
       final result = await conn.execute(
-        Sql.named('SELECT id, name, title, institution, department, specialty, email, avatar_initials, bio, is_verified, role, research_keywords, active_projects, password FROM users WHERE LOWER(email) = @email;'),
-        parameters: {'email': email.trim().toLowerCase()},
+        Sql.named('SELECT id, name, title, institution, department, specialty, email, avatar_initials, bio, is_verified, role, research_keywords, active_projects, password FROM users WHERE LOWER(email) = LOWER(@input) OR LOWER(name) = LOWER(@input) OR LOWER(id) = LOWER(@input);'),
+        parameters: {'input': cleanInput},
       );
       if (result.isNotEmpty) {
         final row = result.first;
+        final dbPass = row[13] != null ? row[13].toString().trim() : '';
+
+        // If user has a real password stored (not dummy mask), verify it
+        if (dbPass.isNotEmpty && dbPass != '••••••••••••' && cleanPass.isNotEmpty) {
+          if (dbPass != cleanPass) {
+            debugPrint('NeonDbService.authenticateUser: password mismatch for $cleanInput');
+            return null;
+          }
+        }
+
         final keywordsRaw = row[11];
         List<String> keywords = [];
         if (keywordsRaw is List) {
