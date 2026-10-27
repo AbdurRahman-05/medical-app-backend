@@ -52,17 +52,33 @@ class RoleHeaderBar extends ConsumerWidget {
         });
       }
     } else {
-      // Researcher Notifications
-      if (projects.isNotEmpty) {
+      // Researcher Notifications - Track sent invites and assigned mentors
+      final pendingInvites = projects.where((p) => p.specialistRequest?.status == RequestStatus.pending).toList();
+      for (final p in pendingInvites) {
         notifications.add({
-          'id': 'notif_mentor_paired',
-          'projectId': projects.first.id,
-          'title': 'Specialist Guide Active in Discussion',
-          'body': 'Prof. Marcus Vance added clinical feedback to your Stage 04 joint discussion.',
-          'time': '10m ago',
-          'icon': Icons.medical_services_rounded,
+          'id': 'notif_invite_${p.id}',
+          'projectId': p.id,
+          'title': 'Specialist Invite Pending',
+          'body': 'Invitation sent to ${p.specialistRequest!.specialistName} for "${p.title}". Awaiting doctor review.',
+          'time': 'Pending',
+          'icon': Icons.hourglass_top_rounded,
+          'color': AppTheme.accentTeal,
+          'actionLabel': 'View Proposal',
+          'isUnassigned': false,
+        });
+      }
+
+      final pairedStudies = projects.where((p) => p.assignedSpecialist != null).toList();
+      for (final p in pairedStudies) {
+        notifications.add({
+          'id': 'notif_paired_${p.id}',
+          'projectId': p.id,
+          'title': 'Faculty Mentor Assigned',
+          'body': '${p.assignedSpecialist!.name} is active co-investigator on "${p.title}".',
+          'time': 'Active',
+          'icon': Icons.handshake_rounded,
           'color': AppTheme.doctorColor,
-          'actionLabel': 'View Feedback',
+          'actionLabel': 'Open Workspace',
           'isUnassigned': false,
         });
       }
@@ -277,8 +293,8 @@ class RoleHeaderBar extends ConsumerWidget {
 
     // Dynamic notification count based on role and unassigned studies
     final unreadCount = currentRole == UserRole.specialist
-        ? state.projects.where((p) => p.assignedSpecialist == null).length + 1
-        : 2;
+        ? state.projects.where((p) => p.assignedSpecialist == null).length
+        : state.projects.where((p) => p.specialistRequest?.status == RequestStatus.pending || p.assignedSpecialist != null).length;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

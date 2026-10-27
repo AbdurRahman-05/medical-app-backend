@@ -315,11 +315,21 @@ class _Stage1IdeaViewState extends ConsumerState<Stage1IdeaView> {
                       spacing: 6,
                       runSpacing: 6,
                       children: widget.project.meshKeywords.map((kw) {
-                        return Chip(
-                          label: Text(kw, style: const TextStyle(fontSize: 11)),
-                          backgroundColor: Colors.white,
-                          side: const BorderSide(color: Color(0xFFCBD5E1)),
-                          padding: EdgeInsets.zero,
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: const Color(0xFF94A3B8), width: 1.2),
+                          ),
+                          child: Text(
+                            kw,
+                            style: const TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF0F172A),
+                            ),
+                          ),
                         );
                       }).toList(),
                     ),

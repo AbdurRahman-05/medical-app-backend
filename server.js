@@ -519,9 +519,21 @@ app.get('/api/live-sync', async (req, res) => {
         feasibilityData = typeof p.feasibility === 'string' ? JSON.parse(p.feasibility) : (p.feasibility || {});
       } catch (_) {}
 
+      let specRequest = null;
+      try {
+        specRequest = typeof p.specialist_request === 'string' ? JSON.parse(p.specialist_request) : (p.specialist_request || null);
+      } catch (_) {}
+
       const stageNum = Number(p.current_stage) || 1;
       const hasSpecialist = Boolean(p.assigned_specialist_id && p.assigned_specialist_name);
       const isWaitingForDoctor = !hasSpecialist || stageNum === 3;
+
+      let mentorName = 'Awaiting Specialist Guide';
+      if (hasSpecialist) {
+        mentorName = p.assigned_specialist_name;
+      } else if (specRequest && specRequest.specialistName) {
+        mentorName = `Invited: ${specRequest.specialistName} (Pending)`;
+      }
 
       return {
         id: p.id,
@@ -529,7 +541,7 @@ app.get('/api/live-sync', async (req, res) => {
         clinicalArea: p.clinical_area || 'Cardiovascular Medicine',
         pi: p.owner_name || 'Dr. Sarah Lin, MD',
         ownerId: p.owner_id || '',
-        mentor: hasSpecialist ? p.assigned_specialist_name : 'Awaiting Specialist Guide',
+        mentor: mentorName,
         assignedSpecialistId: p.assigned_specialist_id,
         isWaitingForDoctor,
         stage: stageNamesFull[stageNum - 1] || `0${stageNum} · Stage 0${stageNum}`,
@@ -545,6 +557,7 @@ app.get('/api/live-sync', async (req, res) => {
         pico: picoData,
         studyPlan: plan,
         feasibility: feasibilityData,
+        specialistRequest: specRequest,
         lastUpdated: p.last_updated,
       };
     });

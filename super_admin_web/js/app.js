@@ -458,10 +458,18 @@ function renderProtocols(filter = '') {
 
   table.innerHTML = filtered
     .map((p) => {
-      const isWaiting = p.isWaitingForDoctor || !p.mentor || p.mentor.includes('Awaiting') || Number(p.stageNum) === 3;
-      const mentorDisplay = isWaiting
-        ? `<span class="badge-waiting-doctor">⏳ WAITING FOR DOCTOR</span>`
-        : `<span style="color: var(--accent-emerald); font-weight: 700">👨‍⚕️ ${p.mentor}</span>`;
+      const hasAssignedSpecialist = Boolean(p.assignedSpecialistId && p.mentor && !p.mentor.includes('Awaiting') && !p.mentor.includes('Invited'));
+      const hasPendingInvite = Boolean(p.specialistRequest && p.specialistRequest.status === 'pending') || (p.mentor && p.mentor.includes('Invited'));
+
+      let mentorDisplay = '';
+      if (hasAssignedSpecialist) {
+        mentorDisplay = `<span style="color: var(--accent-emerald); font-weight: 700">👨‍⚕️ ${p.mentor}</span>`;
+      } else if (hasPendingInvite) {
+        const specName = (p.specialistRequest && p.specialistRequest.specialistName) || p.mentor.replace('Invited:', '').replace('(Pending)', '').trim();
+        mentorDisplay = `<span style="display: inline-block; padding: 3px 8px; border-radius: 6px; background: rgba(6, 182, 212, 0.12); border: 1px solid rgba(6, 182, 212, 0.35); color: var(--accent-cyan); font-size: 11px; font-weight: 700;">⏳ INVITE SENT: ${specName}</span>`;
+      } else {
+        mentorDisplay = `<span class="badge-waiting-doctor">⏳ WAITING FOR DOCTOR</span>`;
+      }
 
       return `
       <tr>

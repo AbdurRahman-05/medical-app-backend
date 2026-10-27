@@ -142,7 +142,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     final unreadCount = role == UserRole.specialist
         ? state.projects.where((p) => p.assignedSpecialist == null).length
-        : 1;
+        : state.projects.where((p) => p.specialistRequest?.status == RequestStatus.pending || p.assignedSpecialist != null).length;
 
     return Scaffold(
       backgroundColor: AppTheme.bgSurface,
@@ -545,6 +545,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ...filteredProjects.map((p) {
                   final isUnassigned = p.assignedSpecialist == null;
                   final isMyCollab = p.assignedSpecialist?.id == user.id;
+                  final hasPendingInvite = p.specialistRequest != null && p.specialistRequest!.status == RequestStatus.pending;
 
                   return Card(
                     margin: const EdgeInsets.only(bottom: 12),
@@ -552,13 +553,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       borderRadius: BorderRadius.circular(14),
                       side: BorderSide(
                         color: isUnassigned
-                            ? const Color(0xFF6EE7B7)
+                            ? (hasPendingInvite ? const Color(0xFF93C5FD) : const Color(0xFF6EE7B7))
                             : (isMyCollab ? const Color(0xFF93C5FD) : Colors.grey.shade200),
                         width: 1.2,
                       ),
                     ),
                     color: isUnassigned
-                        ? const Color(0xFFF0FDF4)
+                        ? (hasPendingInvite ? const Color(0xFFF0FDF4) : const Color(0xFFF0FDF4))
                         : (isMyCollab ? const Color(0xFFF8FAFC) : Colors.white),
                     child: Padding(
                       padding: const EdgeInsets.all(14),
@@ -627,32 +628,52 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           ),
                           const SizedBox(height: 10),
 
-                          // Status Pill
+                          // Status Pill - Tailored strictly by role!
                           Row(
                             children: [
                               Icon(
-                                isUnassigned
-                                    ? Icons.fiber_manual_record_rounded
-                                    : (isMyCollab ? Icons.handshake_rounded : Icons.verified_rounded),
+                                role == UserRole.specialist
+                                    ? (isUnassigned
+                                        ? (hasPendingInvite ? Icons.mark_email_unread_rounded : Icons.fiber_manual_record_rounded)
+                                        : (isMyCollab ? Icons.handshake_rounded : Icons.verified_rounded))
+                                    : (p.assignedSpecialist != null
+                                        ? Icons.verified_rounded
+                                        : (hasPendingInvite ? Icons.hourglass_top_rounded : Icons.person_search_rounded)),
                                 size: 13,
-                                color: isUnassigned
-                                    ? AppTheme.doctorColor
-                                    : (isMyCollab ? AppTheme.researcherColor : AppTheme.textMuted),
+                                color: role == UserRole.specialist
+                                    ? (isUnassigned
+                                        ? AppTheme.doctorColor
+                                        : (isMyCollab ? AppTheme.researcherColor : AppTheme.textMuted))
+                                    : (p.assignedSpecialist != null
+                                        ? AppTheme.doctorColor
+                                        : (hasPendingInvite ? AppTheme.accentTeal : Colors.amber.shade800)),
                               ),
                               const SizedBox(width: 4),
                               Expanded(
                                 child: Text(
-                                  isUnassigned
-                                      ? 'Open for Doctor Mentorship & Co-Authorship'
-                                      : (isMyCollab
-                                          ? 'You are active Guide & Co-Investigator'
-                                          : 'Mentored by ${p.assignedSpecialist!.name}'),
+                                  role == UserRole.specialist
+                                      ? (isUnassigned
+                                          ? (hasPendingInvite && p.specialistRequest?.specialistId == user.id
+                                              ? 'Direct Mentorship Invite for You (${p.ownerName})'
+                                              : 'Open for Doctor Mentorship & Co-Authorship')
+                                          : (isMyCollab
+                                              ? 'You are active Guide & Co-Investigator'
+                                              : 'Mentored by ${p.assignedSpecialist!.name}'))
+                                      : (p.assignedSpecialist != null
+                                          ? 'Mentored by ${p.assignedSpecialist!.name} (${p.assignedSpecialist!.title})'
+                                          : (hasPendingInvite
+                                              ? 'Invitation sent to ${p.specialistRequest!.specialistName} (Pending Doctor Acceptance)'
+                                              : 'Awaiting Specialist Doctor Assignment')),
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w600,
-                                    color: isUnassigned
-                                        ? AppTheme.doctorColor
-                                        : (isMyCollab ? AppTheme.researcherColor : AppTheme.textSecondary),
+                                    color: role == UserRole.specialist
+                                        ? (isUnassigned
+                                            ? AppTheme.doctorColor
+                                            : (isMyCollab ? AppTheme.researcherColor : AppTheme.textSecondary))
+                                        : (p.assignedSpecialist != null
+                                            ? AppTheme.doctorColor
+                                            : (hasPendingInvite ? AppTheme.accentTeal : Colors.amber.shade900)),
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -667,7 +688,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             spacing: 8,
                             runSpacing: 8,
                             children: [
-                              if (isUnassigned)
+                              // 1. DOCTOR-ONLY ACTION: Accept Mentorship
+                              if (isUnassigned && role == UserRole.specialist)
                                 ElevatedButton.icon(
                                   onPressed: () {
                                     ref.read(appStateProvider.notifier).acceptMentorship(p.id);
@@ -683,16 +705,35 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                   ),
                                 ),
-                              if (isMyCollab)
+
+                              // 2. DOCTOR/RESEARCHER PAIRED ACTION: Open Workspace
+                              if (isMyCollab || (role == UserRole.researcher && p.assignedSpecialist != null))
                                 ElevatedButton.icon(
                                   onPressed: () => _openProject(p.id),
                                   icon: const Icon(Icons.forum_rounded, size: 15),
                                   label: const Text('Open Joint Workspace & Chat', style: TextStyle(fontSize: 11)),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppTheme.doctorColor,
+                                    backgroundColor: role == UserRole.specialist ? AppTheme.doctorColor : AppTheme.primaryNavy,
                                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                   ),
                                 ),
+
+                              // 3. RESEARCHER-ONLY ACTION: Invite pending status or Find Mentor
+                              if (role == UserRole.researcher && p.assignedSpecialist == null)
+                                ElevatedButton.icon(
+                                  onPressed: () => _openProject(p.id),
+                                  icon: Icon(hasPendingInvite ? Icons.schedule_rounded : Icons.person_search_rounded, size: 15),
+                                  label: Text(
+                                    hasPendingInvite ? 'Inspect Proposal & Invite Status' : 'Find Specialist Mentor →',
+                                    style: const TextStyle(fontSize: 11),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppTheme.primaryNavy,
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  ),
+                                ),
+
+                              // 4. Default review button
                               OutlinedButton(
                                 onPressed: () => _openProject(p.id),
                                 style: OutlinedButton.styleFrom(
@@ -1550,11 +1591,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         child: Text(
                           project.assignedSpecialist != null
                               ? 'Mentor: ${project.assignedSpecialist!.name}'
-                              : 'Awaiting Specialist Guide',
+                              : (project.specialistRequest?.status == RequestStatus.pending
+                                  ? 'Invite Pending: ${project.specialistRequest!.specialistName}'
+                                  : 'Awaiting Specialist Guide'),
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: project.assignedSpecialist == null ? FontWeight.w700 : FontWeight.normal,
-                            color: project.assignedSpecialist != null ? AppTheme.textSecondary : Colors.amber.shade900,
+                            color: project.assignedSpecialist != null
+                                ? AppTheme.textSecondary
+                                : (project.specialistRequest?.status == RequestStatus.pending
+                                    ? AppTheme.accentTeal
+                                    : Colors.amber.shade900),
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,

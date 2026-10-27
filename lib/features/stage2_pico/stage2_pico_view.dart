@@ -325,10 +325,15 @@ class _Stage2PicoViewState extends ConsumerState<Stage2PicoView> with SingleTick
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        'PubMed & Europe PMC Grounding',
-                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                      const Expanded(
+                        child: Text(
+                          'PubMed & Europe PMC Grounding',
+                          style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
+                      const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
