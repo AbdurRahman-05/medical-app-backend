@@ -113,8 +113,30 @@
           </div>
         </div>
 
-        <!-- KPI Metrics Grid -->
+        <!-- KPI Metrics Grid (Researchers, Specialists, Active Studies, Waiting for Doctors, Ethics) -->
         <div class="metrics-grid">
+          <div class="metric-card">
+            <div class="metric-icon blue">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c3 3 9 3 12 0v-5"></path></svg>
+            </div>
+            <div class="metric-body">
+              <span class="metric-label">Clinical Researchers &amp; Fellows</span>
+              <h3 class="metric-value" id="kpiResearchersCount">0</h3>
+              <span class="metric-trend neutral" id="kpiResearchersTrend">Active Investigators</span>
+            </div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-icon emerald">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><polyline points="16 11 18 13 22 9"></polyline></svg>
+            </div>
+            <div class="metric-body">
+              <span class="metric-label">Doctors &amp; Specialists</span>
+              <h3 class="metric-value" id="kpiSpecialistsCount">0</h3>
+              <span class="metric-trend neutral" id="kpiSpecialistsPending">0 Pending Review</span>
+            </div>
+          </div>
+
           <div class="metric-card">
             <div class="metric-icon purple">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
@@ -126,14 +148,14 @@
             </div>
           </div>
 
-          <div class="metric-card">
-            <div class="metric-icon emerald">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><polyline points="16 11 18 13 22 9"></polyline></svg>
+          <div class="metric-card" style="border-color: rgba(245, 158, 11, 0.4);">
+            <div class="metric-icon amber">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
             </div>
             <div class="metric-body">
-              <span class="metric-label">Accredited Specialists</span>
-              <h3 class="metric-value" id="kpiSpecialistsCount">0</h3>
-              <span class="metric-trend neutral" id="kpiSpecialistsPending">0 Pending Review</span>
+              <span class="metric-label">Waiting for Doctor / Specialist</span>
+              <h3 class="metric-value" id="kpiWaitingDoctorsCount" style="color: var(--accent-amber)">0</h3>
+              <span class="metric-trend neutral" id="kpiWaitingDoctorsTrend">Matching Queue</span>
             </div>
           </div>
 
@@ -145,17 +167,6 @@
               <span class="metric-label">Ethics Packages Audited</span>
               <h3 class="metric-value" id="kpiEthicsCount">0</h3>
               <span class="metric-trend neutral" id="kpiEthicsTrend">Awaiting First Protocol</span>
-            </div>
-          </div>
-
-          <div class="metric-card">
-            <div class="metric-icon amber">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-            </div>
-            <div class="metric-body">
-              <span class="metric-label">PHI Violations Detected</span>
-              <h3 class="metric-value">0</h3>
-              <span class="metric-trend positive">Zero-Breach Certified</span>
             </div>
           </div>
         </div>
@@ -218,26 +229,56 @@
         <div class="card">
           <div class="card-header">
             <div>
-              <h3>Specialist Accreditation Directory</h3>
+              <h3>Accredited Doctors &amp; Specialist Guides Directory</h3>
               <p>Verify doctor medical licenses, clinical specialties, and Institutional Ethics Committee eligibility.</p>
             </div>
             <div class="search-box">
-              <input type="text" id="specialistSearchInput" placeholder="Filter by doctor name, license, or specialty...">
+              <input type="text" id="specialistSearchInput" placeholder="Filter doctors by name, license, or specialty...">
             </div>
           </div>
           <div class="table-container">
             <table class="data-table">
               <thead>
                 <tr>
-                  <th>Clinician</th>
-                  <th>Department & Institution</th>
-                  <th>License / Registration</th>
-                  <th>Clinical Focus</th>
-                  <th>Status</th>
+                  <th>Doctor / Specialist</th>
+                  <th>Department &amp; Hospital</th>
+                  <th>License / Institutional Email</th>
+                  <th>Clinical Focus Area</th>
+                  <th>Accreditation Status</th>
                   <th>Governance Action</th>
                 </tr>
               </thead>
               <tbody id="fullSpecialistTable">
+                <!-- Populated via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Researchers & Fellows Directory -->
+        <div class="card" style="margin-top: 24px;">
+          <div class="card-header">
+            <div>
+              <h3>Verified Clinical Researchers &amp; Fellows Registry</h3>
+              <p>Registered resident investigators, fellows, and principal investigators conducting clinical protocols.</p>
+            </div>
+            <div class="search-box">
+              <input type="text" id="researcherSearchInput" placeholder="Filter researchers by name, department, or area...">
+            </div>
+          </div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Researcher / Investigator</th>
+                  <th>Department &amp; Medical Center</th>
+                  <th>Institutional Email</th>
+                  <th>Research Keywords / Specialty</th>
+                  <th>Active Protocols</th>
+                  <th>Verification</th>
+                </tr>
+              </thead>
+              <tbody id="fullResearcherTable">
                 <!-- Populated via JS -->
               </tbody>
             </table>
@@ -250,24 +291,24 @@
         <div class="card">
           <div class="card-header">
             <div>
-              <h3>Institutional Research Protocol Registry</h3>
-              <p>End-to-end auditability of active clinical protocols, mentor reviews, and IEC submission packages.</p>
+              <h3>Institutional Clinical Protocol Registry</h3>
+              <p>Real-time oversight of research stages, lead investigators, team mentors, and pending specialist matchings.</p>
             </div>
             <div class="search-box">
-              <input type="text" id="protocolSearchInput" placeholder="Search protocol titles, PIs, or areas...">
+              <input type="text" id="protocolSearchInput" placeholder="Search by study title, PI, mentor, or clinical area...">
             </div>
           </div>
           <div class="table-container">
             <table class="data-table">
               <thead>
                 <tr>
-                  <th>Protocol Title</th>
-                  <th>Principal Investigator</th>
-                  <th>Specialist Guide</th>
-                  <th>Current Stage</th>
-                  <th>Version</th>
-                  <th>IEC Package</th>
-                  <th>Audit Dossier</th>
+                  <th>Protocol Title &amp; Domain</th>
+                  <th>Principal Investigator (Lead)</th>
+                  <th>Doctor / Specialist Mentor</th>
+                  <th>Pipeline Stage</th>
+                  <th>Cohort Target</th>
+                  <th>Ethics Readiness</th>
+                  <th>Full Study Dossier</th>
                 </tr>
               </thead>
               <tbody id="protocolRegistryTable">

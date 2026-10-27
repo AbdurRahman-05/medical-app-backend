@@ -16,13 +16,16 @@ class LiveAuditSyncService {
       final syncData = {
         'lastSync': DateTime.now().toString().substring(0, 19),
         'protocols': projects.map((p) {
+          final isWaiting = p.assignedSpecialist == null || p.currentStage == ProjectStage.connectSpecialist;
           return {
             'id': p.id,
             'title': p.title,
+            'clinicalArea': p.clinicalArea,
             'pi': p.ownerName.isNotEmpty ? p.ownerName : 'Dr. Sarah Lin, MD',
             'mentor': p.assignedSpecialist != null
                 ? p.assignedSpecialist!.name
                 : 'Awaiting Specialist Guide',
+            'isWaitingForDoctor': isWaiting,
             'stage': '0${p.currentStage.stepNumber} · ${p.currentStage.title}',
             'stageNum': p.currentStage.stepNumber,
             'version': p.protocolVersions.isNotEmpty
@@ -37,6 +40,10 @@ class LiveAuditSyncService {
                 ? p.studyPlan.sampleSizeTarget
                 : 140,
             'readability': 'Grade 6.2 (Plain Language)',
+            'observationText': p.observationText,
+            'aiClarifiedQuestion': p.aiClarifiedQuestion,
+            'clarityScore': p.clarityScore,
+            'meshKeywords': p.meshKeywords,
           };
         }).toList(),
         'auditEvents': auditEvents.map((a) {

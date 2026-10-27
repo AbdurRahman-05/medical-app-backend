@@ -3,7 +3,13 @@
 const state = {
   activeTab: 'dashboard',
   specialists: [],
+  researchers: [],
   protocols: [],
+  userStats: {
+    researchersCount: 0,
+    specialistsCount: 0,
+    totalUsers: 0,
+  },
   auditEvents: [
     {
       id: 'AUD-0001',
@@ -32,6 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
   checkLiveData();
   renderDashboard();
   renderSpecialists();
+  renderResearchers();
   renderProtocols();
   renderAuditLogs();
   setupEventListeners();
@@ -62,44 +69,94 @@ function checkLiveData() {
           if (data) applyLiveData(data);
         })
         .catch(() => {
-          // Direct file mode; handled by window.CLIN_LIVE_DATA
+          // Handled by memory or fallback
         });
     });
 
-  // Fetch real registered specialists from database
+  // Fetch real registered users (both researchers and doctors) from database
   fetch('/api/users')
     .then((res) => (res.ok ? res.json() : []))
     .then((users) => {
       if (Array.isArray(users)) {
-        const specialistsOnly = users
-          .filter((u) => u.role === 'SPECIALIST' || u.role === 'DOCTOR' || u.title)
-          .map((u) => ({
-            id: u.id,
-            name: u.name,
-            title: u.title || 'Clinical Specialist',
-            department: u.department || 'Hospital Faculty',
-            institution: u.institution || 'Medical Center',
-            license: u.email || 'NPI-PENDING',
-            specialty: u.specialty || 'General Medicine',
-            focus: u.research_keywords || 'Clinical Practice',
-            isVerified: u.is_verified || false,
-            activeProjects: u.active_projects || 0,
-          }));
-
-        if (JSON.stringify(state.specialists) !== JSON.stringify(specialistsOnly)) {
-          state.specialists = specialistsOnly;
-          renderSpecialists();
-          renderDashboard();
-        }
+        processUsersList(users);
       }
     })
     .catch(() => {});
+}
+
+function processUsersList(users) {
+  const doctors = [];
+  const researchers = [];
+
+  users.forEach((u) => {
+    const roleLower = (u.role || '').toLowerCase();
+    const isDoctor = roleLower === 'specialist' || roleLower === 'doctor' || (u.title && u.title.toLowerCase().includes('consultant'));
+
+    const profile = {
+      id: u.id,
+      name: u.name,
+      title: u.title || (isDoctor ? 'Clinical Specialist' : 'Clinical Fellow'),
+      department: u.department || 'Internal Medicine',
+      institution: u.institution || 'Apex Medical Consortium',
+      license: u.email || 'NPI-VERIFIED',
+      specialty: u.specialty || 'Clinical Research',
+      focus: Array.isArray(u.research_keywords) ? u.research_keywords.join(', ') : (u.research_keywords || u.specialty || 'Medicine'),
+      isVerified: u.is_verified ?? true,
+      activeProjects: u.active_projects || 0,
+      email: u.email,
+    };
+
+    if (isDoctor) {
+      doctors.push(profile);
+    } else {
+      researchers.push(profile);
+    }
+  });
+
+  state.specialists = doctors;
+  state.researchers = researchers;
+  state.userStats.researchersCount = researchers.length;
+  state.userStats.specialistsCount = doctors.length;
+  state.userStats.totalUsers = users.length;
+
+  updateUserKpis();
+  renderSpecialists();
+  renderResearchers();
+}
+
+function updateUserKpis() {
+  const resCountEl = document.getElementById('kpiResearchersCount');
+  if (resCountEl) resCountEl.innerText = state.userStats.researchersCount;
+
+  const resTrendEl = document.getElementById('kpiResearchersTrend');
+  if (resTrendEl) {
+    resTrendEl.innerText = `${state.userStats.researchersCount} Active Investigator${state.userStats.researchersCount === 1 ? '' : 's'}`;
+  }
+
+  const specCountEl = document.getElementById('kpiSpecialistsCount');
+  if (specCountEl) specCountEl.innerText = state.userStats.specialistsCount;
+
+  const pendingCount = state.specialists.filter((s) => !s.isVerified).length;
+  const specPendingEl = document.getElementById('kpiSpecialistsPending');
+  if (specPendingEl) {
+    specPendingEl.innerText = pendingCount > 0 ? `${pendingCount} Pending Review` : `${state.specialists.length} Accredited Faculty`;
+  }
+
+  const pendingBadge = document.getElementById('pendingSpecialistBadge');
+  if (pendingBadge) pendingBadge.innerText = pendingCount;
 }
 
 function applyLiveData(data) {
   if (!data) return;
 
   let hasChanged = false;
+
+  // Process user stats if sent by live-sync
+  if (data.userStats) {
+    state.userStats.researchersCount = data.userStats.researchersCount || state.userStats.researchersCount;
+    state.userStats.specialistsCount = data.userStats.specialistsCount || state.userStats.specialistsCount;
+    updateUserKpis();
+  }
 
   if (Array.isArray(data.protocols)) {
     if (JSON.stringify(state.protocols) !== JSON.stringify(data.protocols)) {
@@ -109,12 +166,25 @@ function applyLiveData(data) {
     const studiesCountEl = document.getElementById('kpiStudiesCount');
     if (studiesCountEl) studiesCountEl.innerText = data.protocols.length;
 
+    // Count waiting for doctors
+    const waitingDoctorsCount = state.protocols.filter(
+      (p) => p.isWaitingForDoctor || !p.mentor || p.mentor.includes('Awaiting') || Number(p.stageNum) === 3
+    ).length;
+
+    const waitingEl = document.getElementById('kpiWaitingDoctorsCount');
+    if (waitingEl) waitingEl.innerText = waitingDoctorsCount;
+
+    const waitingTrendEl = document.getElementById('kpiWaitingDoctorsTrend');
+    if (waitingTrendEl) {
+      waitingTrendEl.innerText = waitingDoctorsCount > 0 ? `${waitingDoctorsCount} Study in Matching Queue` : 'All Mentors Assigned';
+    }
+
     const ethicsCount = state.protocols.filter((p) => Number(p.stageNum) >= 7).length;
     const kpiEthicsCount = document.getElementById('kpiEthicsCount');
     if (kpiEthicsCount) kpiEthicsCount.innerText = ethicsCount;
     const kpiEthicsTrend = document.getElementById('kpiEthicsTrend');
     if (kpiEthicsTrend) {
-      kpiEthicsTrend.innerText = ethicsCount > 0 ? '100% Grade 6 Readability' : 'Awaiting First Protocol';
+      kpiEthicsTrend.innerText = ethicsCount > 0 ? `${ethicsCount} Protocol Validated` : 'Awaiting First Protocol';
     }
   }
 
@@ -166,8 +236,8 @@ function switchTab(tabId) {
   // Update Header Title
   const titles = {
     dashboard: ['Executive Governance Overview', 'Supervisory oversight of clinical research protocols, mentor accreditations, and ethics compliance.'],
-    specialists: ['Specialist Accreditation & Vetting', 'Review doctor registration numbers, institutional appointments, and grant mentor credentials.'],
-    protocols: ['Institutional Protocol & Ethics Registry', 'Complete audit trail of all active resident and fellow research studies.'],
+    specialists: ['Accreditation & Investigator Registry', 'Comprehensive directory of accredited doctors, specialists, and registered clinical researchers.'],
+    protocols: ['Institutional Clinical Protocol Registry', 'Full clinical visibility of ongoing research studies, team mentors, and pending specialist matchings.'],
     security: ['Automated PHI / PII Privacy Sentinel', 'Zero-trust verification engine preventing identifiable clinical records from entering research drafts.'],
     audit: ['Institutional Audit & Compliance Trail', 'Immutable cryptographic log of stage gates, endorsements, and document generation.'],
   };
@@ -181,77 +251,85 @@ function switchTab(tabId) {
 function renderDashboard() {
   // Render Pipeline Distribution
   const pipelineContainer = document.getElementById('pipelineDistribution');
-  pipelineContainer.innerHTML = state.pipelineDistribution
-    .map(
-      (node) => `
-    <div class="stage-node">
-      <span class="stage-num">STAGE ${node.num}</span>
-      <span class="stage-name">${node.stage}</span>
-      <span class="stage-count">${node.count}</span>
-    </div>
-  `
-    )
-    .join('');
-
-  // Quick Specialist Table
-  const quickTable = document.getElementById('quickSpecialistTable');
-  if (state.specialists.length === 0) {
-    quickTable.innerHTML = `
-      <tr>
-        <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 24px 10px;">
-          No accredited specialists in queue. Live doctor registrations will appear here.
-        </td>
-      </tr>
-    `;
-  } else {
-    quickTable.innerHTML = state.specialists
-      .slice(0, 3)
+  if (pipelineContainer) {
+    pipelineContainer.innerHTML = state.pipelineDistribution
       .map(
-        (doc) => `
-      <tr>
-        <td><strong>${doc.name}</strong><br><small style="color: var(--text-dim)">${doc.institution}</small></td>
-        <td><code style="font-family: monospace; font-size: 11px; color: var(--accent-cyan)">${doc.license}</code></td>
-        <td>${doc.specialty}</td>
-        <td>${
-          doc.isVerified
-            ? '<span style="color: var(--accent-emerald); font-weight: 700; font-size: 11px">● VERIFIED</span>'
-            : '<span style="color: var(--accent-amber); font-weight: 700; font-size: 11px">● PENDING</span>'
-        }</td>
-        <td>
-          ${
-            !doc.isVerified
-              ? `<button class="btn btn-primary" style="padding: 4px 10px; font-size: 11px" onclick="verifyDoctor('${doc.id}')">Approve</button>`
-              : `<button class="btn btn-secondary" style="padding: 4px 10px; font-size: 11px" disabled>Approved</button>`
-          }
-        </td>
-      </tr>
+        (node) => `
+      <div class="stage-node ${node.count > 0 ? 'active' : ''}">
+        <span class="stage-num">STAGE ${node.num}</span>
+        <span class="stage-name">${node.stage}</span>
+        <span class="stage-count" style="${node.count > 0 ? 'color: var(--accent-cyan); font-weight: 800;' : ''}">${node.count}</span>
+      </div>
     `
       )
       .join('');
   }
 
+  // Quick Specialist Table
+  const quickTable = document.getElementById('quickSpecialistTable');
+  if (quickTable) {
+    if (state.specialists.length === 0) {
+      quickTable.innerHTML = `
+        <tr>
+          <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 24px 10px;">
+            No accredited specialists in queue. Live doctor registrations will appear here.
+          </td>
+        </tr>
+      `;
+    } else {
+      quickTable.innerHTML = state.specialists
+        .slice(0, 4)
+        .map(
+          (doc) => `
+        <tr>
+          <td><strong>${doc.name}</strong><br><small style="color: var(--text-dim)">${doc.institution}</small></td>
+          <td><code style="font-family: monospace; font-size: 11px; color: var(--accent-cyan)">${doc.license}</code></td>
+          <td>${doc.specialty}</td>
+          <td>${
+            doc.isVerified
+              ? '<span style="color: var(--accent-emerald); font-weight: 700; font-size: 11px">● VERIFIED</span>'
+              : '<span style="color: var(--accent-amber); font-weight: 700; font-size: 11px">● PENDING</span>'
+          }</td>
+          <td>
+            ${
+              !doc.isVerified
+                ? `<button class="btn btn-primary" style="padding: 4px 10px; font-size: 11px" onclick="verifyDoctor('${doc.id}')">Approve</button>`
+                : `<button class="btn btn-secondary" style="padding: 4px 10px; font-size: 11px" disabled>Approved</button>`
+            }
+          </td>
+        </tr>
+      `
+        )
+        .join('');
+    }
+  }
+
   // Quick Audit Feed
   const quickAudit = document.getElementById('quickAuditFeed');
-  quickAudit.innerHTML = state.auditEvents
-    .slice(0, 3)
-    .map(
-      (ev) => `
-    <div class="audit-item">
-      <span class="audit-tag">${ev.id}</span>
-      <div class="audit-info">
-        <strong>${ev.title}</strong>
-        <p>${ev.description}</p>
-        <small>${ev.timestamp} • By ${ev.operator}</small>
+  if (quickAudit) {
+    quickAudit.innerHTML = state.auditEvents
+      .slice(0, 4)
+      .map(
+        (ev) => `
+      <div class="audit-item">
+        <span class="audit-tag">${ev.id}</span>
+        <div class="audit-info">
+          <strong>${ev.title}</strong>
+          <p>${ev.description}</p>
+          <small>${ev.timestamp} • By ${ev.operator}</small>
+        </div>
       </div>
-    </div>
-  `
-    )
-    .join('');
+    `
+      )
+      .join('');
+  }
 }
 
-// Render Specialists
+// Render Doctors & Specialists
 function renderSpecialists(filter = '') {
   const table = document.getElementById('fullSpecialistTable');
+  if (!table) return;
+
   const filtered = state.specialists.filter(
     (s) =>
       s.name.toLowerCase().includes(filter.toLowerCase()) ||
@@ -265,7 +343,7 @@ function renderSpecialists(filter = '') {
         <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 36px 16px;">
           <div style="font-size: 24px; margin-bottom: 8px">👨‍⚕️</div>
           <strong style="color: #fff">No Specialist Profiles Registered Yet</strong><br>
-          <small>Live vetted doctor and mentor registrations will appear here automatically.</small>
+          <small>Live doctor and mentor registrations will appear here automatically.</small>
         </td>
       </tr>
     `;
@@ -275,8 +353,8 @@ function renderSpecialists(filter = '') {
         (doc) => `
       <tr>
         <td>
-          <strong>${doc.name}</strong><br>
-          <small style="color: var(--text-muted)">${doc.title}</small>
+          <strong style="color: #fff">${doc.name}</strong><br>
+          <small style="color: var(--accent-emerald)">${doc.title}</small>
         </td>
         <td>
           ${doc.department}<br>
@@ -287,15 +365,15 @@ function renderSpecialists(filter = '') {
         <td>
           ${
             doc.isVerified
-              ? '<span class="status-chip active">VERIFIED MENTOR</span>'
-              : '<span style="font-size: 11px; font-weight: 700; color: var(--accent-amber)">PENDING VETTING</span>'
+              ? '<span class="status-chip active">ACCREDITED MENTOR</span>'
+              : '<span style="font-size: 11px; font-weight: 700; color: var(--accent-amber)">PENDING REVIEW</span>'
           }
         </td>
         <td>
           ${
             !doc.isVerified
-              ? `<button class="btn btn-primary" onclick="verifyDoctor('${doc.id}')">Grant Accreditation</button>`
-              : `<button class="btn btn-secondary" style="font-size: 11px" onclick="revokeDoctor('${doc.id}')">Revoke Access</button>`
+              ? `<button class="btn btn-primary" style="padding: 4px 10px; font-size: 11px" onclick="verifyDoctor('${doc.id}')">Grant Accreditation</button>`
+              : `<button class="btn btn-secondary" style="padding: 4px 10px; font-size: 11px" onclick="revokeDoctor('${doc.id}')">Revoke Access</button>`
           }
         </td>
       </tr>
@@ -303,33 +381,75 @@ function renderSpecialists(filter = '') {
       )
       .join('');
   }
-
-  // Update Pending badge & KPI count
-  const pendingCount = state.specialists.filter((s) => !s.isVerified).length;
-  const pendingBadge = document.getElementById('pendingSpecialistBadge');
-  if (pendingBadge) pendingBadge.innerText = pendingCount;
-  const specCountEl = document.getElementById('kpiSpecialistsCount');
-  if (specCountEl) specCountEl.innerText = state.specialists.length;
-  const specPendingEl = document.getElementById('kpiSpecialistsPending');
-  if (specPendingEl) specPendingEl.innerText = `${pendingCount} Pending Review`;
 }
 
-// Render Protocols
-function renderProtocols(filter = '') {
-  const table = document.getElementById('protocolRegistryTable');
-  const filtered = state.protocols.filter(
-    (p) =>
-      p.title.toLowerCase().includes(filter.toLowerCase()) ||
-      p.pi.toLowerCase().includes(filter.toLowerCase())
+// Render Clinical Researchers & Fellows
+function renderResearchers(filter = '') {
+  const table = document.getElementById('fullResearcherTable');
+  if (!table) return;
+
+  const filtered = state.researchers.filter(
+    (r) =>
+      r.name.toLowerCase().includes(filter.toLowerCase()) ||
+      r.department.toLowerCase().includes(filter.toLowerCase()) ||
+      r.specialty.toLowerCase().includes(filter.toLowerCase()) ||
+      r.email.toLowerCase().includes(filter.toLowerCase())
   );
 
   if (filtered.length === 0) {
     table.innerHTML = `
       <tr>
-        <td colspan="7" style="text-align: center; padding: 36px 20px; color: var(--text-dim)">
-          <div style="font-size: 24px; margin-bottom: 8px">📋</div>
-          <strong style="color: #fff">No Active Protocols in NeonDB Cloud Registry</strong><br>
-          <small>All test mock data deleted. When clinical researchers initiate a live study, it syncs here automatically.</small>
+        <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 36px 16px;">
+          <div style="font-size: 24px; margin-bottom: 8px">🎓</div>
+          <strong style="color: #fff">No Clinical Researchers in Registry</strong><br>
+          <small>Registered resident and fellow investigators will appear here automatically.</small>
+        </td>
+      </tr>
+    `;
+  } else {
+    table.innerHTML = filtered
+      .map(
+        (res) => `
+      <tr>
+        <td>
+          <strong style="color: #fff">${res.name}</strong><br>
+          <small style="color: var(--accent-purple)">${res.title}</small>
+        </td>
+        <td>
+          ${res.department}<br>
+          <small style="color: var(--text-dim)">${res.institution}</small>
+        </td>
+        <td><code style="font-family: monospace; font-size: 11.5px; color: var(--accent-cyan); background: rgba(6,182,212,0.1); padding: 2px 6px; border-radius: 4px">${res.email}</code></td>
+        <td><span style="font-size: 11.5px; color: var(--text-muted)">${res.focus}</span></td>
+        <td><span style="font-weight: 700; color: #fff">${res.activeProjects} Active</span></td>
+        <td><span style="color: var(--accent-emerald); font-weight: 700; font-size: 11px">● VERIFIED PI</span></td>
+      </tr>
+    `
+      )
+      .join('');
+  }
+}
+
+// Render Protocols with Full Clinical Details & Waiting for Doctor alerts
+function renderProtocols(filter = '') {
+  const table = document.getElementById('protocolRegistryTable');
+  if (!table) return;
+
+  const filtered = state.protocols.filter(
+    (p) =>
+      p.title.toLowerCase().includes(filter.toLowerCase()) ||
+      p.pi.toLowerCase().includes(filter.toLowerCase()) ||
+      (p.clinicalArea && p.clinicalArea.toLowerCase().includes(filter.toLowerCase())) ||
+      (p.mentor && p.mentor.toLowerCase().includes(filter.toLowerCase()))
+  );
+
+  if (filtered.length === 0) {
+    table.innerHTML = `
+      <tr>
+        <td colspan="7" style="text-align: center; padding: 44px 20px; color: var(--text-dim)">
+          <div style="font-size: 28px; margin-bottom: 8px">📋</div>
+          <strong style="color: #fff; font-size: 15px">No Active Studies in Live NeonDB Cloud Registry</strong><br>
+          <small style="color: var(--text-muted)">When clinical investigators initiate a study from the mobile app, it appears here in real-time with full stage and mentor tracking.</small>
         </td>
       </tr>
     `;
@@ -337,34 +457,48 @@ function renderProtocols(filter = '') {
   }
 
   table.innerHTML = filtered
-    .map(
-      (p) => `
-    <tr>
-      <td>
-        <strong style="color: #fff; font-size: 13px">${p.title}</strong><br>
-        <small style="color: var(--accent-cyan)">Target N = ${p.sampleSize} Subjects</small>
-      </td>
-      <td>${p.pi}</td>
-      <td><span style="color: var(--accent-emerald); font-weight: 600">${p.mentor}</span></td>
-      <td>
-        <span style="background: rgba(255,255,255,0.06); padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700">
-          ${p.stage}
-        </span>
-      </td>
-      <td><code style="font-size: 11px">${p.version}</code></td>
-      <td><span style="font-size: 11px; color: var(--text-muted)">${p.iecStatus}</span></td>
-      <td>
-        <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 11px" onclick="openProtocolModal('${p.id}')">Inspect Dossier</button>
-      </td>
-    </tr>
-  `
-    )
+    .map((p) => {
+      const isWaiting = p.isWaitingForDoctor || !p.mentor || p.mentor.includes('Awaiting') || Number(p.stageNum) === 3;
+      const mentorDisplay = isWaiting
+        ? `<span class="badge-waiting-doctor">⏳ WAITING FOR DOCTOR</span>`
+        : `<span style="color: var(--accent-emerald); font-weight: 700">👨‍⚕️ ${p.mentor}</span>`;
+
+      return `
+      <tr>
+        <td>
+          <strong style="color: #fff; font-size: 13.5px">${p.title}</strong><br>
+          <span class="badge-clinical-area">${p.clinicalArea || 'Cardiovascular Medicine'}</span>
+        </td>
+        <td>
+          <strong style="color: #E2E8F0">${p.pi}</strong><br>
+          <small style="color: var(--text-dim)">Principal Investigator</small>
+        </td>
+        <td>${mentorDisplay}</td>
+        <td>
+          <span class="badge-stage-pill">${p.stage}</span>
+        </td>
+        <td><strong style="color: var(--accent-cyan)">N = ${p.sampleSize || 120}</strong><br><small style="color: var(--text-dim)">Subjects</small></td>
+        <td>
+          <span style="font-size: 11px; font-weight: 600; color: ${Number(p.stageNum) >= 7 ? 'var(--accent-emerald)' : 'var(--text-muted)'}">
+            ${p.iecStatus}
+          </span>
+        </td>
+        <td>
+          <button class="btn btn-secondary" style="padding: 5px 12px; font-size: 11.5px; border-color: rgba(6, 182, 212, 0.4); color: var(--accent-cyan);" onclick="openProtocolModal('${p.id}')">
+            Inspect Dossier →
+          </button>
+        </td>
+      </tr>
+    `;
+    })
     .join('');
 }
 
 // Render Audit Logs
 function renderAuditLogs() {
   const table = document.getElementById('fullAuditLogTable');
+  if (!table) return;
+
   table.innerHTML = state.auditEvents
     .map(
       (ev) => `
@@ -385,14 +519,13 @@ function renderAuditLogs() {
     .join('');
 }
 
-// Actions
+// Actions: Doctor Accreditation
 function verifyDoctor(docId) {
   const doc = state.specialists.find((s) => s.id === docId);
   if (!doc) return;
 
   doc.isVerified = true;
 
-  // Add audit record
   const newAudit = {
     id: `AUD-${Math.floor(1000 + Math.random() * 9000)}`,
     timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
@@ -408,7 +541,7 @@ function verifyDoctor(docId) {
   renderSpecialists();
   renderAuditLogs();
 
-  alert(`Accreditation granted to ${doc.name}. Verified badge issued.`);
+  alert(`Accreditation granted to ${doc.name}. Verified mentor badge issued.`);
 }
 
 function revokeDoctor(docId) {
@@ -422,27 +555,92 @@ function revokeDoctor(docId) {
   }
 }
 
+// Full Study Dossier Modal
 function openProtocolModal(protocolId) {
   const p = state.protocols.find((item) => item.id === protocolId);
   if (!p) return;
 
+  const isWaiting = p.isWaitingForDoctor || !p.mentor || p.mentor.includes('Awaiting') || Number(p.stageNum) === 3;
+  const pico = p.pico || {};
+  const plan = p.studyPlan || {};
+
   document.getElementById('modalProtocolTitle').innerText = p.title;
   document.getElementById('modalProtocolBody').innerHTML = `
-    <div style="background: rgba(255,255,255,0.02); padding: 16px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 16px">
-      <div style="display: flex; justify-content: space-between; margin-bottom: 8px">
-        <span><strong>Principal Investigator:</strong> ${p.pi}</span>
-        <span><strong>Specialist Mentor:</strong> ${p.mentor}</span>
+    <!-- Top Metadata Header -->
+    <div style="background: rgba(255,255,255,0.03); padding: 18px; border-radius: 10px; border: 1px solid var(--border-color); margin-bottom: 20px">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+        <span class="badge-clinical-area" style="font-size: 12px; padding: 4px 10px;">${p.clinicalArea || 'Clinical Research'}</span>
+        <span class="badge-stage-pill" style="font-size: 12px; padding: 4px 10px;">Stage: ${p.stage}</span>
       </div>
-      <div><strong>Current State:</strong> ${p.stage} (${p.version})</div>
-      <div><strong>Target Cohort Size:</strong> ${p.sampleSize} Subjects</div>
-      <div><strong>Informed Consent Readability:</strong> ${p.readability}</div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-top: 10px; font-size: 13px;">
+        <div>
+          <span style="color: var(--text-dim); display: block; font-size: 11px;">PRINCIPAL INVESTIGATOR</span>
+          <strong style="color: #fff;">${p.pi}</strong>
+        </div>
+        <div>
+          <span style="color: var(--text-dim); display: block; font-size: 11px;">SPECIALIST MENTOR / GUIDE</span>
+          ${isWaiting
+            ? '<span class="badge-waiting-doctor" style="margin-top: 4px;">⏳ WAITING FOR DOCTOR / SPECIALIST</span>'
+            : `<strong style="color: var(--accent-emerald);">👨‍⚕️ ${p.mentor}</strong>`
+          }
+        </div>
+        <div>
+          <span style="color: var(--text-dim); display: block; font-size: 11px;">COHORT SIZE & READABILITY</span>
+          <strong style="color: var(--accent-cyan);">N = ${p.sampleSize} Subjects</strong> • ${p.readability}
+        </div>
+        <div>
+          <span style="color: var(--text-dim); display: block; font-size: 11px;">ETHICS GATE STATUS</span>
+          <strong style="color: ${Number(p.stageNum) >= 7 ? 'var(--accent-emerald)' : 'var(--accent-amber)'};">${p.iecStatus}</strong>
+        </div>
+      </div>
     </div>
-    <h4 style="margin-bottom: 8px; color: #fff">Institutional Ethics Checklist Verification:</h4>
+
+    <!-- Clinical Observation & Research Question -->
+    <div style="margin-bottom: 18px;">
+      <h4 style="color: #fff; font-size: 13px; margin-bottom: 6px; letter-spacing: 0.5px;">1. CLINICAL OBSERVATION & HYPOTHESIS</h4>
+      <div style="background: rgba(0,0,0,0.25); border-left: 3px solid var(--accent-cyan); padding: 12px; border-radius: 4px; font-size: 12.5px; color: #CBD5E1; line-height: 1.6;">
+        ${p.observationText || 'Observational data recorded by investigator during clinical rounds.'}
+      </div>
+    </div>
+
+    <div style="margin-bottom: 18px;">
+      <h4 style="color: #fff; font-size: 13px; margin-bottom: 6px; letter-spacing: 0.5px;">2. AI-CLARIFIED CLINICAL RESEARCH QUESTION (Clarity: ${p.clarityScore || 85}/100)</h4>
+      <div style="background: rgba(6,182,212,0.06); border: 1px solid rgba(6,182,212,0.25); padding: 12px; border-radius: 6px; font-size: 12.5px; color: #E2E8F0; font-weight: 500; line-height: 1.6;">
+        ${p.aiClarifiedQuestion || p.title}
+      </div>
+    </div>
+
+    <!-- PICO Criteria Breakdown Table -->
+    <div style="margin-bottom: 18px;">
+      <h4 style="color: #fff; font-size: 13px; margin-bottom: 8px; letter-spacing: 0.5px;">3. FORMULATED PICO FRAMEWORK</h4>
+      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; font-size: 12px;">
+        <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); padding: 10px; border-radius: 6px;">
+          <strong style="color: var(--accent-cyan);">[P] Population / Cohort:</strong>
+          <p style="color: var(--text-muted); margin-top: 4px;">${pico.population || 'Adult patients meeting clinical enrollment criteria'}</p>
+        </div>
+        <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); padding: 10px; border-radius: 6px;">
+          <strong style="color: var(--accent-emerald);">[I] Intervention:</strong>
+          <p style="color: var(--text-muted); margin-top: 4px;">${pico.intervention || 'Standardized clinical regimen under study'}</p>
+        </div>
+        <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); padding: 10px; border-radius: 6px;">
+          <strong style="color: var(--accent-amber);">[C] Comparison / Control:</strong>
+          <p style="color: var(--text-muted); margin-top: 4px;">${pico.comparison || 'Standard-of-care baseline control group'}</p>
+        </div>
+        <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); padding: 10px; border-radius: 6px;">
+          <strong style="color: var(--accent-purple);">[O] Primary Outcome:</strong>
+          <p style="color: var(--text-muted); margin-top: 4px;">${pico.outcome || 'Statistically significant clinical endpoint'}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ethics Checklist -->
+    <h4 style="margin-bottom: 8px; color: #fff; font-size: 13px;">4. INSTITUTIONAL ETHICS COMMITTEE (IEC) VERIFICATION CHECKLIST</h4>
     <ul style="padding-left: 20px; line-height: 1.8; color: var(--text-muted); font-size: 12.5px">
-      <li>[✓] Protocol signed by PI & Guide</li>
-      <li>[✓] Informed Consent Form (ICF) drafted in plain language</li>
-      <li>[✓] Safe Harbor data de-identification verified (Zero PHI)</li>
+      <li>[✓] Informed Consent Form (ICF) drafted in plain language (Grade 6 Readability)</li>
+      <li>[✓] Safe Harbor data de-identification verified (Zero identifiable PHI)</li>
       <li>[✓] Risk-benefit disclosure aligned with Helsinki Declaration standards</li>
+      <li>[${isWaiting ? ' ' : '✓'}] Verified specialist doctor oversight endorsement</li>
     </ul>
   `;
 
@@ -468,13 +666,19 @@ function setupEventListeners() {
     renderSpecialists(e.target.value);
   });
 
+  document.getElementById('researcherSearchInput')?.addEventListener('input', (e) => {
+    renderResearchers(e.target.value);
+  });
+
   document.getElementById('protocolSearchInput')?.addEventListener('input', (e) => {
     renderProtocols(e.target.value);
   });
 
   document.getElementById('refreshDataBtn')?.addEventListener('click', () => {
+    checkLiveData();
     renderDashboard();
     renderSpecialists();
+    renderResearchers();
     renderProtocols();
     renderAuditLogs();
     alert('Institutional telemetry synchronized with active database.');

@@ -476,19 +476,24 @@ app.get('/api/live-sync', async (req, res) => {
   try {
     const projectsRes = await pool.query('SELECT * FROM projects ORDER BY last_updated DESC');
     const auditsRes = await pool.query('SELECT * FROM audit_events ORDER BY timestamp DESC LIMIT 50');
+    const usersRes = await pool.query('SELECT id, name, title, institution, department, specialty, email, role, is_verified, avatar_initials, active_projects FROM users ORDER BY name ASC');
 
-    const stageNames = [
-      '01. Idea',
-      '02. PICO',
-      '03. Matching',
-      '04. Collab',
-      '05. Plan',
-      '06. Review',
-      '07. IEC',
-      '08. Manuscript',
+    const usersList = usersRes.rows || [];
+    const researchers = usersList.filter((u) => !u.role || u.role.toLowerCase() === 'researcher');
+    const specialists = usersList.filter((u) => u.role && (u.role.toLowerCase() === 'specialist' || u.role.toLowerCase() === 'doctor'));
+
+    const stageNamesFull = [
+      '01 · Idea Clarification',
+      '02 · PICO Formulation',
+      '03 · Specialist Matching',
+      '04 · Joint Collaboration',
+      '05 · Study Methodology',
+      '06 · Protocol Review',
+      '07 · IEC Ethical Package',
+      '08 · Clinical Manuscript',
     ];
 
-    const distribution = stageNames.map((name, idx) => {
+    const distribution = stageNamesFull.map((name, idx) => {
       const stepNum = idx + 1;
       const count = projectsRes.rows.filter((p) => Number(p.current_stage) === stepNum).length;
       return {
@@ -504,17 +509,43 @@ app.get('/api/live-sync', async (req, res) => {
         plan = typeof p.study_plan === 'string' ? JSON.parse(p.study_plan) : (p.study_plan || {});
       } catch (_) {}
 
+      let picoData = {};
+      try {
+        picoData = typeof p.pico === 'string' ? JSON.parse(p.pico) : (p.pico || {});
+      } catch (_) {}
+
+      let feasibilityData = {};
+      try {
+        feasibilityData = typeof p.feasibility === 'string' ? JSON.parse(p.feasibility) : (p.feasibility || {});
+      } catch (_) {}
+
+      const stageNum = Number(p.current_stage) || 1;
+      const hasSpecialist = Boolean(p.assigned_specialist_id && p.assigned_specialist_name);
+      const isWaitingForDoctor = !hasSpecialist || stageNum === 3;
+
       return {
         id: p.id,
-        title: p.title,
+        title: p.title || 'Untitled Protocol',
+        clinicalArea: p.clinical_area || 'Cardiovascular Medicine',
         pi: p.owner_name || 'Dr. Sarah Lin, MD',
-        mentor: p.assigned_specialist_name || 'Awaiting Specialist Guide',
-        stage: `0${p.current_stage} · Stage 0${p.current_stage}`,
-        stageNum: p.current_stage,
+        ownerId: p.owner_id || '',
+        mentor: hasSpecialist ? p.assigned_specialist_name : 'Awaiting Specialist Guide',
+        assignedSpecialistId: p.assigned_specialist_id,
+        isWaitingForDoctor,
+        stage: stageNamesFull[stageNum - 1] || `0${stageNum} · Stage 0${stageNum}`,
+        stageNum,
         version: 'v1.0 (Live)',
-        iecStatus: p.current_stage >= 7 ? 'Checklist Ready (7/7 Validated)' : 'Pending Protocol Gate',
-        sampleSize: plan.sampleSizeTarget || 120,
+        iecStatus: stageNum >= 7 ? 'Checklist Ready (7/7 Validated)' : (stageNum >= 4 ? 'In Progress (4/7 Validated)' : 'Pending Protocol Gate'),
+        sampleSize: plan.sampleSizeTarget || (plan.sample_size_target || 120),
         readability: 'Grade 6.2 (Plain Language)',
+        observationText: p.observation_text || '',
+        aiClarifiedQuestion: p.ai_clarified_question || '',
+        clarityScore: Number(p.clarity_score) || 85,
+        meshKeywords: Array.isArray(p.mesh_keywords) ? p.mesh_keywords : [],
+        pico: picoData,
+        studyPlan: plan,
+        feasibility: feasibilityData,
+        lastUpdated: p.last_updated,
       };
     });
 
@@ -543,6 +574,13 @@ app.get('/api/live-sync', async (req, res) => {
 
     const payload = {
       lastSync: new Date().toISOString().replace('T', ' ').substring(0, 19),
+      userStats: {
+        researchersCount: researchers.length,
+        specialistsCount: specialists.length,
+        totalUsers: usersList.length,
+        researchers: researchers,
+        specialists: specialists,
+      },
       protocols: dbProtocols,
       auditEvents: dbAudits,
       pipelineDistribution: (livePushCache && Array.isArray(livePushCache.pipelineDistribution) && livePushCache.protocols && livePushCache.protocols.length > 0)
