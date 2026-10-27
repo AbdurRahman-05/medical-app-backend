@@ -954,15 +954,57 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           const SizedBox(height: 16),
 
           // Clinical Specialty & Keywords
-          Text('Clinical Research Focus', style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w700)),
-          const SizedBox(height: 8),
+          Text(
+            'Clinical Research Focus',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 10),
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: user.researchKeywords.map((kw) => Chip(
-              label: Text(kw, style: const TextStyle(fontSize: 11)),
-              backgroundColor: AppTheme.primaryNavy.withValues(alpha: 0.05),
-              padding: const EdgeInsets.symmetric(horizontal: 4),
+            children: user.researchKeywords.map((kw) => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F5F9), // Slate 100 - crisp, non-transparent fill
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: const Color(0xFF94A3B8), // Slate 400 - high-contrast visible border on physical screens
+                  width: 1.2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1.5),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 7,
+                    height: 7,
+                    decoration: const BoxDecoration(
+                      color: AppTheme.accentCyan,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    kw,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF0F172A), // Slate 900 - dark, crisp, clear text
+                    ),
+                  ),
+                ],
+              ),
             )).toList(),
           ),
           const SizedBox(height: 20),
