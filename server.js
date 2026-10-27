@@ -26,9 +26,23 @@ app.use(express.json({ limit: '10mb' }));
 // Serve Super Admin Portal statically
 app.use('/admin', express.static(path.join(__dirname, 'super_admin_web')));
 
-// ---------------------------------------------------------------------------
-// HEALTH CHECK
-// ---------------------------------------------------------------------------
+// API Root Index
+app.get(['/', '/api'], (req, res) => {
+  res.json({
+    name: 'ClinResearch Medical Platform API',
+    status: 'online',
+    version: '1.0.0',
+    database: 'NeonDB PostgreSQL (Live)',
+    endpoints: {
+      health: '/health',
+      adminPortal: '/admin',
+      projects: '/api/projects',
+      users: '/api/users',
+      audits: '/api/audits',
+      stats: '/api/stats',
+    },
+  });
+});
 app.get('/health', async (req, res) => {
   try {
     const dbRes = await pool.query('SELECT NOW()');
