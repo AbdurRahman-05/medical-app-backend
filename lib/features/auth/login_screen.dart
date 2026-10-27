@@ -14,7 +14,11 @@ class LoginScreen extends ConsumerStatefulWidget {
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends ConsumerState<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProviderStateMixin {
+  late AnimationController _revealController;
+  late Animation<Offset> _slideAnimation;
+  late Animation<double> _fadeAnimation;
+
   bool _isCreateAccountMode = false;
   UserRole _selectedRole = UserRole.researcher;
 
@@ -101,7 +105,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _revealController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 750),
+    );
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.35),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _revealController,
+      curve: Curves.easeOutCubic,
+    ));
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _revealController, curve: Curves.easeOut),
+    );
+    _revealController.forward();
+  }
+
+  @override
   void dispose() {
+    _revealController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _regIdController.dispose();
@@ -117,161 +142,210 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.bgSurface,
+      backgroundColor: const Color(0xFFE2E8F0), // Cool Slate Backdrop
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 500),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // App Brand Animated Mascot (Transparent, No Background or Circle)
-                  Center(
-                    child: SizedBox(
-                      width: 150,
-                      height: 150,
-                      child: Lottie.asset(
-                        'assets/animations/Perulogy.json',
+        bottom: false,
+        child: Column(
+          children: [
+            // Top Section: Floating Mascot Animation
+            Padding(
+              padding: const EdgeInsets.only(top: 8, bottom: 6),
+              child: Center(
+                child: SizedBox(
+                  width: 140,
+                  height: 140,
+                  child: Lottie.asset(
+                    'assets/animations/Perulogy.json',
+                    fit: BoxFit.contain,
+                    repeat: true,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Lottie.asset(
+                        'lib/animations/Perulogy.json',
                         fit: BoxFit.contain,
                         repeat: true,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Lottie.asset(
-                            'lib/animations/Perulogy.json',
-                            fit: BoxFit.contain,
-                            repeat: true,
-                            errorBuilder: (ctx, err, stack) => const Center(
-                              child: Icon(
-                                Icons.biotech_rounded,
-                                color: AppTheme.accentCyan,
-                                size: 52,
+                        errorBuilder: (ctx, err, stack) => const Center(
+                          child: Icon(
+                            Icons.biotech_rounded,
+                            color: AppTheme.accentCyan,
+                            size: 52,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
+
+            // Bottom Curved Reveal Sheet (Animated Slide from down to up)
+            Expanded(
+              child: SlideTransition(
+                position: _slideAnimation,
+                child: FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: CustomPaint(
+                    painter: CurvedSheetPainter(
+                      color: Colors.white,
+                      shadowColor: const Color(0xFF0F172A).withValues(alpha: 0.15),
+                    ),
+                    child: ClipPath(
+                      clipper: CurvedSheetClipper(),
+                      child: Container(
+                        width: double.infinity,
+                        color: Colors.white,
+                        child: Center(
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 500),
+                            child: SingleChildScrollView(
+                              padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  // Drag indicator / pill
+                                  Center(
+                                    child: Container(
+                                      width: 44,
+                                      height: 4,
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFCBD5E1),
+                                        borderRadius: BorderRadius.circular(2),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 14),
+
+                                  // App Brand Header inside the curved reveal sheet
+                                  Text(
+                                    'ClinResearch Portal',
+                                    textAlign: TextAlign.center,
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.w800,
+                                      color: AppTheme.primaryNavy,
+                                      letterSpacing: -0.3,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    _isCreateAccountMode
+                                        ? 'Register for verified institutional research access'
+                                        : 'Evidence-grounded, AI-assisted research workspace',
+                                    textAlign: TextAlign.center,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      color: AppTheme.textSecondary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 18),
+
+                                  // Role Segment Switcher (2 Roles)
+                                  _buildRoleSwitcher(),
+                                  const SizedBox(height: 14),
+
+                                  // Sign In / Create Account Toggle Tab
+                                  _buildModeToggle(),
+                                  const SizedBox(height: 16),
+
+                                  // Main Form Card (Sign In OR Create Account)
+                                  if (!_isCreateAccountMode)
+                                    _buildSignInCard()
+                                  else
+                                    _buildCreateAccountCard(),
+
+                                  const SizedBox(height: 16),
+
+                                  // SSO Button
+                                  OutlinedButton.icon(
+                                    onPressed: _performLogin,
+                                    icon: const Icon(Icons.vpn_key_outlined, size: 16, color: AppTheme.primaryNavy),
+                                    label: const Text(
+                                      'Institutional SSO / ORCID Login',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    style: OutlinedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                                      backgroundColor: const Color(0xFFF8FAFC),
+                                      side: const BorderSide(color: Color(0xFFE2E8F0)),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          );
-                        },
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'ClinResearch Portal',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                      color: AppTheme.primaryNavy,
-                      letterSpacing: -0.3,
-                    ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildModeToggle() {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFE2E8F0),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      padding: const EdgeInsets.all(3),
+      child: Row(
+        children: [
+          Expanded(
+            child: InkWell(
+              onTap: () => setState(() => _isCreateAccountMode = false),
+              borderRadius: BorderRadius.circular(6),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  color: !_isCreateAccountMode ? Colors.white : Colors.transparent,
+                  borderRadius: BorderRadius.circular(6),
+                  boxShadow: !_isCreateAccountMode
+                      ? [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4)]
+                      : null,
+                ),
+                child: Text(
+                  'Sign In',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: !_isCreateAccountMode ? FontWeight.w700 : FontWeight.w500,
+                    color: !_isCreateAccountMode ? AppTheme.primaryNavy : AppTheme.textSecondary,
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _isCreateAccountMode
-                        ? 'Register for verified institutional research access'
-                        : 'Evidence-grounded, AI-assisted research workspace',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      color: AppTheme.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Role Segment Switcher (2 Roles)
-                  _buildRoleSwitcher(),
-                  const SizedBox(height: 16),
-
-                  // Sign In / Create Account Toggle Tab
-                  Container(
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE2E8F0),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    padding: const EdgeInsets.all(3),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: InkWell(
-                            onTap: () => setState(() => _isCreateAccountMode = false),
-                            borderRadius: BorderRadius.circular(6),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                              decoration: BoxDecoration(
-                                color: !_isCreateAccountMode ? Colors.white : Colors.transparent,
-                                borderRadius: BorderRadius.circular(6),
-                                boxShadow: !_isCreateAccountMode
-                                    ? [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4)]
-                                    : null,
-                              ),
-                              child: Text(
-                                'Sign In',
-                                textAlign: TextAlign.center,
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
-                                  fontWeight: !_isCreateAccountMode ? FontWeight.w700 : FontWeight.w500,
-                                  color: !_isCreateAccountMode ? AppTheme.primaryNavy : AppTheme.textSecondary,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          child: InkWell(
-                            onTap: () => setState(() => _isCreateAccountMode = true),
-                            borderRadius: BorderRadius.circular(6),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                              decoration: BoxDecoration(
-                                color: _isCreateAccountMode ? Colors.white : Colors.transparent,
-                                borderRadius: BorderRadius.circular(6),
-                                boxShadow: _isCreateAccountMode
-                                    ? [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4)]
-                                    : null,
-                              ),
-                              child: Text(
-                                'Create Account',
-                                textAlign: TextAlign.center,
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
-                                  fontWeight: _isCreateAccountMode ? FontWeight.w700 : FontWeight.w500,
-                                  color: _isCreateAccountMode ? AppTheme.primaryNavy : AppTheme.textSecondary,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Main Form Card (Sign In OR Create Account)
-                  if (!_isCreateAccountMode)
-                    _buildSignInCard()
-                  else
-                    _buildCreateAccountCard(),
-
-                  const SizedBox(height: 16),
-
-                  // SSO Button
-                  OutlinedButton.icon(
-                    onPressed: _performLogin,
-                    icon: const Icon(Icons.vpn_key_outlined, size: 16, color: AppTheme.primaryNavy),
-                    label: const Text(
-                      'Institutional SSO / ORCID Login',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-                      backgroundColor: Colors.white,
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           ),
-        ),
+          Expanded(
+            child: InkWell(
+              onTap: () => setState(() => _isCreateAccountMode = true),
+              borderRadius: BorderRadius.circular(6),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  color: _isCreateAccountMode ? Colors.white : Colors.transparent,
+                  borderRadius: BorderRadius.circular(6),
+                  boxShadow: _isCreateAccountMode
+                      ? [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4)]
+                      : null,
+                ),
+                child: Text(
+                  'Create Account',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: _isCreateAccountMode ? FontWeight.w700 : FontWeight.w500,
+                    color: _isCreateAccountMode ? AppTheme.primaryNavy : AppTheme.textSecondary,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -637,4 +711,48 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       ),
     );
   }
+}
+
+/// Custom painter to draw an upward curved arch with smooth elevation drop shadow
+class CurvedSheetPainter extends CustomPainter {
+  final Color color;
+  final Color shadowColor;
+
+  const CurvedSheetPainter({
+    required this.color,
+    required this.shadowColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const curveHeight = 32.0;
+    final path = Path()
+      ..moveTo(0, curveHeight)
+      ..quadraticBezierTo(size.width / 2, -6.0, size.width, curveHeight)
+      ..lineTo(size.width, size.height)
+      ..lineTo(0, size.height)
+      ..close();
+
+    canvas.drawShadow(path, shadowColor, 16.0, true);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+/// Custom clipper to clip the white surface into the same curved arch structure
+class CurvedSheetClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    const curveHeight = 32.0;
+    return Path()
+      ..moveTo(0, curveHeight)
+      ..quadraticBezierTo(size.width / 2, -6.0, size.width, curveHeight)
+      ..lineTo(size.width, size.height)
+      ..lineTo(0, size.height)
+      ..close();
+  }
+
+  @override
+  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
 }
