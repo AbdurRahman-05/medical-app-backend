@@ -69,6 +69,56 @@ class NeonDbService {
     if (isTestEnvironment) {
       return MockClinicalData.specialistDirectory;
     }
+
+    // Tier 1: Fast & Firewall-Proof HTTPS REST API
+    final apiUrls = [
+      'https://medical-app-backend-tovg.onrender.com/api/users',
+      'http://localhost:5000/api/users',
+      'http://10.0.2.2:5000/api/users',
+    ];
+
+    for (final url in apiUrls) {
+      try {
+        final res = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 4));
+        if (res.statusCode == 200) {
+          final data = jsonDecode(res.body);
+          if (data is List) {
+            final List<UserProfile> users = [];
+            for (final u in data) {
+              if (u is Map) {
+                final rawKeywords = u['research_keywords'];
+                List<String> keywords = [];
+                if (rawKeywords is List) {
+                  keywords = rawKeywords.map((e) => e.toString()).toList();
+                }
+                users.add(UserProfile(
+                  id: (u['id'] as String?) ?? '',
+                  name: (u['name'] as String?) ?? '',
+                  title: (u['title'] as String?) ?? '',
+                  institution: (u['institution'] as String?) ?? '',
+                  department: (u['department'] as String?) ?? '',
+                  specialty: (u['specialty'] as String?) ?? '',
+                  email: (u['email'] as String?) ?? '',
+                  avatarInitials: (u['avatar_initials'] as String?) ?? 'MD',
+                  bio: (u['bio'] as String?) ?? '',
+                  isVerified: (u['is_verified'] as bool?) ?? true,
+                  role: u['role'] as String?,
+                  researchKeywords: keywords,
+                  activeProjects: (u['active_projects'] as int?) ?? 0,
+                ));
+              }
+            }
+            if (users.isNotEmpty) {
+              return users;
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint('NeonDbService.fetchUsers HTTPS error on $url: $e');
+      }
+    }
+
+    // Tier 2: Direct PostgreSQL Connection Fallback
     try {
       final conn = await _getConnection();
       final result = await conn.execute(
@@ -99,15 +149,55 @@ class NeonDbService {
           activeProjects: (row[12] as int?) ?? 0,
         ));
       }
-      return users;
+      return users.isNotEmpty ? users : MockClinicalData.specialistDirectory;
     } catch (e) {
-      debugPrint('NeonDbService.fetchUsers error: $e');
+      debugPrint('NeonDbService.fetchUsers direct SQL error: $e');
       return MockClinicalData.specialistDirectory;
     }
   }
 
   static Future<UserProfile?> insertUser(UserProfile user, {String password = '••••••••••••'}) async {
     if (isTestEnvironment) return user;
+
+    // Tier 1: Fast & Firewall-Proof HTTPS REST API (Port 443 works reliably on cellular & Wi-Fi)
+    final apiUrls = [
+      'https://medical-app-backend-tovg.onrender.com/api/register',
+      'http://localhost:5000/api/register',
+      'http://10.0.2.2:5000/api/register',
+    ];
+
+    for (final url in apiUrls) {
+      try {
+        final res = await http
+            .post(
+              Uri.parse(url),
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode({
+                'id': user.id,
+                'name': user.name,
+                'title': user.title,
+                'institution': user.institution,
+                'department': user.department,
+                'specialty': user.specialty,
+                'email': user.email.toLowerCase(),
+                'password': password,
+                'role': user.role ?? 'researcher',
+                'bio': user.bio,
+                'researchKeywords': user.researchKeywords,
+              }),
+            )
+            .timeout(const Duration(seconds: 4));
+
+        if (res.statusCode == 200 || res.statusCode == 201) {
+          debugPrint('NeonDbService: Successfully persisted user via HTTPS: ${user.name} (${user.email})');
+          return user;
+        }
+      } catch (e) {
+        debugPrint('NeonDbService: HTTPS register error on $url: $e');
+      }
+    }
+
+    // Tier 2: Direct PostgreSQL Connection Fallback
     try {
       final conn = await _getConnection();
       await conn.execute(
@@ -146,7 +236,7 @@ class NeonDbService {
       );
       return user;
     } catch (e) {
-      debugPrint('NeonDbService.insertUser error: $e');
+      debugPrint('NeonDbService.insertUser direct SQL error: $e');
       return user;
     }
   }
@@ -379,16 +469,52 @@ class NeonDbService {
         final ownerId = (row[8] as String?) ?? 'user_res_01';
         final ownerName = (row[9] as String?) ?? 'Dr. Sarah Lin, MD';
         final assignedSpecialistId = row[10] as String?;
+        final assignedSpecialistName = row[11] as String?;
 
         UserProfile? assignedSpecialist;
-        if (assignedSpecialistId != null) {
+        if (assignedSpecialistId != null && assignedSpecialistId.isNotEmpty) {
           try {
             assignedSpecialist = availableSpecialists.firstWhere(
               (s) => s.id == assignedSpecialistId,
             );
           } catch (_) {
-            assignedSpecialist = MockClinicalData.currentSpecialist;
+            final docName = (assignedSpecialistName != null && assignedSpecialistName.isNotEmpty)
+                ? assignedSpecialistName
+                : 'Dr. Test Doctor, MD';
+            final initials = docName.split(' ').where((s) => s.isNotEmpty).take(2).map((s) => s[0]).join().toUpperCase();
+            assignedSpecialist = UserProfile(
+              id: assignedSpecialistId,
+              name: docName,
+              title: 'Cardiology Specialist & Clinical Mentor',
+              institution: 'Madurai Medical College',
+              department: 'Department of Cardiology',
+              specialty: clinicalArea.isNotEmpty ? clinicalArea : 'Cardiovascular Medicine',
+              email: 'testdoctor@apexmed.edu',
+              avatarInitials: initials.isNotEmpty ? initials : 'TD',
+              bio: 'Clinical Specialist Consultant and Research Mentor.',
+              isVerified: true,
+              role: 'specialist',
+              researchKeywords: [clinicalArea.isNotEmpty ? clinicalArea : 'Cardiology'],
+              activeProjects: 1,
+            );
           }
+        } else if (assignedSpecialistName != null && assignedSpecialistName.isNotEmpty) {
+          final initials = assignedSpecialistName.split(' ').where((s) => s.isNotEmpty).take(2).map((s) => s[0]).join().toUpperCase();
+          assignedSpecialist = UserProfile(
+            id: 'user_spec_testdoctor',
+            name: assignedSpecialistName,
+            title: 'Cardiology Specialist & Clinical Mentor',
+            institution: 'Madurai Medical College',
+            department: 'Department of Cardiology',
+            specialty: clinicalArea.isNotEmpty ? clinicalArea : 'Cardiovascular Medicine',
+            email: 'testdoctor@apexmed.edu',
+            avatarInitials: initials.isNotEmpty ? initials : 'TD',
+            bio: 'Clinical Specialist Consultant and Research Mentor.',
+            isVerified: true,
+            role: 'specialist',
+            researchKeywords: [clinicalArea.isNotEmpty ? clinicalArea : 'Cardiology'],
+            activeProjects: 1,
+          );
         }
 
         // PICO data
@@ -645,6 +771,55 @@ class NeonDbService {
 
   static Future<List<ChatMessage>> fetchChatMessages(String projectId) async {
     if (isTestEnvironment) return [];
+
+    // Tier 1: Fast & Firewall-Proof HTTPS REST API
+    final apiUrls = [
+      'https://medical-app-backend-tovg.onrender.com/api/chat/$projectId',
+      'http://localhost:5000/api/chat/$projectId',
+      'http://10.0.2.2:5000/api/chat/$projectId',
+    ];
+
+    for (final url in apiUrls) {
+      try {
+        final res = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 4));
+        if (res.statusCode == 200) {
+          final data = jsonDecode(res.body);
+          if (data is List) {
+            final List<ChatMessage> messages = [];
+            for (final row in data) {
+              if (row is Map) {
+                final roleStr = (row['sender_role'] ?? row['senderRole']) as String? ?? 'researcher';
+                UserRole role = UserRole.researcher;
+                if (roleStr == 'specialist') role = UserRole.specialist;
+                if (roleStr == 'admin') role = UserRole.admin;
+
+                DateTime ts = DateTime.now();
+                final rawTs = row['timestamp'];
+                if (rawTs != null) {
+                  ts = DateTime.tryParse(rawTs.toString()) ?? DateTime.now();
+                }
+
+                messages.add(ChatMessage(
+                  id: (row['id'] as String?) ?? 'msg_${DateTime.now().millisecondsSinceEpoch}',
+                  senderId: (row['sender_id'] ?? row['senderId']) as String? ?? '',
+                  senderName: (row['sender_name'] ?? row['senderName']) as String? ?? '',
+                  senderRole: role,
+                  text: (row['text'] as String?) ?? '',
+                  isVoiceNote: (row['is_voice_note'] ?? row['isVoiceNote']) == true,
+                  voiceDurationSeconds: (row['voice_duration_seconds'] ?? row['voiceDurationSeconds']) as int?,
+                  timestamp: ts,
+                ));
+              }
+            }
+            return messages;
+          }
+        }
+      } catch (e) {
+        debugPrint('NeonDbService.fetchChatMessages HTTPS error on $url: $e');
+      }
+    }
+
+    // Tier 2: Direct PostgreSQL Connection Fallback
     try {
       final conn = await _getConnection();
       final result = await conn.execute(
@@ -684,13 +859,51 @@ class NeonDbService {
       }
       return messages;
     } catch (e) {
-      debugPrint('NeonDbService.fetchChatMessages error: $e');
+      debugPrint('NeonDbService.fetchChatMessages direct SQL error: $e');
       return [];
     }
   }
 
   static Future<void> insertChatMessage(String projectId, ChatMessage msg) async {
     if (isTestEnvironment) return;
+
+    // Tier 1: Fast & Firewall-Proof HTTPS REST API
+    final apiUrls = [
+      'https://medical-app-backend-tovg.onrender.com/api/chat/$projectId',
+      'http://localhost:5000/api/chat/$projectId',
+      'http://10.0.2.2:5000/api/chat/$projectId',
+    ];
+
+    for (final url in apiUrls) {
+      try {
+        final res = await http
+            .post(
+              Uri.parse(url),
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode({
+                'id': msg.id,
+                'projectId': projectId,
+                'senderId': msg.senderId,
+                'senderName': msg.senderName,
+                'senderRole': msg.senderRole.name,
+                'text': msg.text,
+                'isVoiceNote': msg.isVoiceNote,
+                'voiceDurationSeconds': msg.voiceDurationSeconds,
+                'timestamp': msg.timestamp.toIso8601String(),
+              }),
+            )
+            .timeout(const Duration(seconds: 4));
+
+        if (res.statusCode == 200 || res.statusCode == 201) {
+          debugPrint('NeonDbService: Chat message sent via HTTPS');
+          return;
+        }
+      } catch (e) {
+        debugPrint('NeonDbService.insertChatMessage HTTPS error on $url: $e');
+      }
+    }
+
+    // Tier 2: Direct PostgreSQL Connection Fallback
     try {
       final conn = await _getConnection();
       await conn.execute(
@@ -712,7 +925,7 @@ class NeonDbService {
         },
       );
     } catch (e) {
-      debugPrint('NeonDbService.insertChatMessage error: $e');
+      debugPrint('NeonDbService.insertChatMessage direct SQL error: $e');
     }
   }
 

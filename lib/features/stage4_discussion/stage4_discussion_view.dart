@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -17,17 +18,28 @@ class Stage4DiscussionView extends ConsumerStatefulWidget {
 class _Stage4DiscussionViewState extends ConsumerState<Stage4DiscussionView> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final TextEditingController _messageController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+  Timer? _pollTimer;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    
+    // Poll chat messages every 3 seconds for real-time sync between researcher and doctor
+    _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      if (mounted) {
+        ref.read(appStateProvider.notifier).refreshChatMessages(widget.project.id);
+      }
+    });
   }
 
   @override
   void dispose() {
+    _pollTimer?.cancel();
     _tabController.dispose();
     _messageController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -40,14 +52,30 @@ class _Stage4DiscussionViewState extends ConsumerState<Stage4DiscussionView> wit
           text: text,
         );
     _messageController.clear();
+
+    Future.delayed(const Duration(milliseconds: 150), () {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(appStateProvider);
+    final project = state.projects.firstWhere(
+      (p) => p.id == widget.project.id,
+      orElse: () => widget.project,
+    );
     final isDoctor = state.activeRole == UserRole.specialist;
     final notifier = ref.read(appStateProvider.notifier);
-    final feasibility = widget.project.feasibility;
+    final feasibility = project.feasibility;
+    final partnerName = project.assignedSpecialist?.name ?? project.specialistRequest?.specialistName ?? 'Dr. Test Doctor, MD';
+    final partnerInitial = project.assignedSpecialist?.avatarInitials ?? 'TD';
 
     return Column(
       children: [
@@ -64,7 +92,7 @@ class _Stage4DiscussionViewState extends ConsumerState<Stage4DiscussionView> wit
             tabs: [
               Tab(
                 icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),
-                text: 'Project Chat (${widget.project.chatMessages.length})',
+                text: 'Project Chat (${project.chatMessages.length})',
               ),
               Tab(
                 icon: const Icon(Icons.fact_check_outlined, size: 18),
@@ -92,14 +120,16 @@ class _Stage4DiscussionViewState extends ConsumerState<Stage4DiscussionView> wit
                           radius: 14,
                           backgroundColor: AppTheme.doctorColor.withValues(alpha: 0.15),
                           child: Text(
-                            widget.project.assignedSpecialist?.avatarInitials ?? 'DOC',
+                            isDoctor ? 'PI' : partnerInitial,
                             style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppTheme.doctorColor),
                           ),
                         ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'Collaborating with ${widget.project.assignedSpecialist?.name ?? "Specialist"} (${widget.project.assignedSpecialist?.specialty ?? "Cardiology"})',
+                            isDoctor
+                                ? 'Collaborating with Researcher ${project.ownerName} on ${project.clinicalArea}'
+                                : 'Collaborating with Specialist Mentor $partnerName (${project.assignedSpecialist?.specialty ?? "Cardiovascular Medicine"})',
                             style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -111,14 +141,34 @@ class _Stage4DiscussionViewState extends ConsumerState<Stage4DiscussionView> wit
 
                   // Messages List
                   Expanded(
-                    child: ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: widget.project.chatMessages.length,
-                      itemBuilder: (context, index) {
-                        final msg = widget.project.chatMessages[index];
-                        final isMe = isDoctor
-                            ? msg.senderRole == UserRole.specialist
-                            : msg.senderRole == UserRole.researcher;
+                    child: project.chatMessages.isEmpty
+                        ? Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.forum_outlined, size: 48, color: AppTheme.textSecondary.withValues(alpha: 0.4)),
+                                const SizedBox(height: 10),
+                                const Text(
+                                  'Live Peer Discussion Channel',
+                                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                                ),
+                                const SizedBox(height: 4),
+                                const Text(
+                                  'Messages sync instantly between Researcher and Specialist Mentor.',
+                                  style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                                ),
+                              ],
+                            ),
+                          )
+                        : ListView.builder(
+                            controller: _scrollController,
+                            padding: const EdgeInsets.all(16),
+                            itemCount: project.chatMessages.length,
+                            itemBuilder: (context, index) {
+                              final msg = project.chatMessages[index];
+                              final isMe = isDoctor
+                                  ? msg.senderRole == UserRole.specialist
+                                  : msg.senderRole == UserRole.researcher;
 
                         return Align(
                           alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,

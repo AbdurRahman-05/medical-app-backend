@@ -340,8 +340,8 @@ class AppStateNotifier extends Notifier<AppState> {
     }
 
     // Persist to NeonDB directly
-    NeonDbService.insertUser(newProfile, password: password);
-    NeonDbService.insertAuditEvent(newAudit);
+    await NeonDbService.insertUser(newProfile, password: password);
+    await NeonDbService.insertAuditEvent(newAudit);
 
     LiveAuditSyncService.syncToAdminWeb(
       projects: state.projects,
@@ -600,6 +600,35 @@ class AppStateNotifier extends Notifier<AppState> {
     });
   }
 
+  void joinProcessAsSpecialist(String projectId, {UserProfile? specialist}) {
+    final spec = specialist ?? state.currentSpecialist;
+    _updateProject(projectId, (p) {
+      final updated = p.copyWith(
+        assignedSpecialist: spec,
+        specialistRequest: SpecialistRequest(
+          specialistId: spec.id,
+          specialistName: spec.name,
+          specialty: spec.specialty,
+          requestedAt: DateTime.now(),
+          status: RequestStatus.accepted,
+          coverNote: 'Specialist joined project as co-investigator & clinical mentor.',
+        ),
+        currentStage: p.currentStage.stepNumber < ProjectStage.jointDiscussion.stepNumber
+            ? ProjectStage.jointDiscussion
+            : p.currentStage,
+        lastUpdated: DateTime.now(),
+      );
+      NeonDbService.upsertProject(updated);
+      return updated;
+    });
+
+    _logAuditAndSync(
+      title: 'Specialist Joined Project',
+      description: '${spec.name} joined as Clinical Mentor & Co-Author for study $projectId.',
+      severity: 'INFO',
+    );
+  }
+
   void respondToSpecialistRequest({
     required String projectId,
     required RequestStatus status,
@@ -657,6 +686,28 @@ class AppStateNotifier extends Notifier<AppState> {
 
     // Persist to NeonDB chat_messages table
     NeonDbService.insertChatMessage(projectId, newMsg);
+  }
+
+  Future<void> refreshChatMessages(String projectId) async {
+    try {
+      final liveMessages = await NeonDbService.fetchChatMessages(projectId);
+      if (liveMessages.isEmpty) return;
+
+      final currentProj = state.projects.firstWhere(
+        (p) => p.id == projectId,
+        orElse: () => state.activeProject,
+      );
+
+      // Check if message count changed or new message received
+      if (liveMessages.length != currentProj.chatMessages.length ||
+          (liveMessages.isNotEmpty && currentProj.chatMessages.isNotEmpty && liveMessages.last.id != currentProj.chatMessages.last.id)) {
+        _updateProject(projectId, (p) {
+          return p.copyWith(chatMessages: liveMessages);
+        });
+      }
+    } catch (e) {
+      debugPrint('refreshChatMessages error: $e');
+    }
   }
 
   void updateFeasibility(String projectId, FeasibilityChecklist feasibility) {

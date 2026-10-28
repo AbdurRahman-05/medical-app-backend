@@ -82,7 +82,7 @@ app.post('/api/login', async (req, res) => {
     }
 
     const result = await pool.query(
-      'SELECT id, name, title, institution, department, specialty, email, avatar_initials, bio, is_verified, role, research_keywords, active_projects, password FROM users WHERE LOWER(email) = $1 OR LOWER(name) = $1 OR LOWER(id) = $1',
+      'SELECT id, name, title, institution, department, specialty, email, avatar_initials, bio, is_verified, role, research_keywords, active_projects, password FROM users WHERE LOWER(email) = $1 OR LOWER(name) = $1 OR LOWER(id) = $1 OR LOWER(split_part(email, \'@\', 1)) = $1',
       [input]
     );
 
@@ -227,35 +227,7 @@ app.post('/api/auth/login', async (req, res) => {
         return res.status(401).json({ error: 'Invalid password. Please check your credentials.' });
       }
     } else {
-      // Auto-provision demo account if logging in with new credentials
-      const isSpec = role === 'specialist' || cleanEmail.includes('vance');
-      const isAdmin = role === 'admin' || cleanEmail.includes('pendelton');
-      const determinedRole = isAdmin ? 'admin' : (isSpec ? 'specialist' : 'researcher');
-      const name = isSpec ? 'Prof. Marcus Vance, MD, PhD' : (isAdmin ? 'Dr. Arthur Pendelton' : 'Dr. Sarah Lin, MD');
-
-      const createRes = await pool.query(
-        `INSERT INTO users (id, name, title, institution, department, specialty, email, password, avatar_initials, bio, is_verified, role, research_keywords, active_projects)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-         ON CONFLICT (email) DO UPDATE SET email = EXCLUDED.email
-         RETURNING id, name, title, institution, department, specialty, email, avatar_initials, bio, is_verified, role, research_keywords, active_projects`,
-        [
-          `user_${determinedRole}_${Date.now().toString(36)}`,
-          name,
-          isSpec ? 'Senior Consultant Cardiologist' : 'Cardiology Fellow & Researcher',
-          'Apex Institute of Medical Sciences',
-          'Department of Cardiology',
-          'Cardiovascular Medicine',
-          cleanEmail,
-          password || '••••••••••••',
-          isSpec ? 'MV' : 'SL',
-          'Verified Clinical Investigator.',
-          true,
-          determinedRole,
-          ['Clinical Research', 'Cardiovascular Medicine'],
-          0,
-        ]
-      );
-      user = createRes.rows[0];
+      return res.status(401).json({ error: 'User account not found in database. Please register your account.' });
     }
 
     // Log sign-in audit
@@ -441,7 +413,7 @@ app.post('/api/audit-events', async (req, res) => {
 // ---------------------------------------------------------------------------
 // CHAT MESSAGES API
 // ---------------------------------------------------------------------------
-app.get('/api/chat/:projectId', async (req, res) => {
+app.get(['/api/chat/:projectId', '/api/projects/:projectId/messages'], async (req, res) => {
   try {
     const { projectId } = req.params;
     const result = await pool.query(
@@ -454,10 +426,19 @@ app.get('/api/chat/:projectId', async (req, res) => {
   }
 });
 
-app.post('/api/chat/:projectId', async (req, res) => {
+app.post(['/api/chat/:projectId', '/api/projects/:projectId/messages'], async (req, res) => {
   try {
     const { projectId } = req.params;
-    const { id, senderId, senderName, senderRole, text, isVoiceNote, voiceDurationSeconds, timestamp } = req.body;
+    const body = req.body || {};
+    const id = body.id || `msg_${Date.now()}`;
+    const senderId = body.senderId || body.sender_id || 'user_unknown';
+    const senderName = body.senderName || body.sender_name || 'Anonymous';
+    const senderRole = body.senderRole || body.sender_role || 'researcher';
+    const text = body.text || '';
+    const isVoiceNote = body.isVoiceNote ?? body.is_voice_note ?? false;
+    const voiceDurationSeconds = body.voiceDurationSeconds ?? body.voice_duration_seconds ?? null;
+    const timestamp = body.timestamp ? new Date(body.timestamp) : new Date();
+
     const query = `
       INSERT INTO chat_messages (id, project_id, sender_id, sender_name, sender_role, text, is_voice_note, voice_duration_seconds, timestamp)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
@@ -465,15 +446,15 @@ app.post('/api/chat/:projectId', async (req, res) => {
       RETURNING *;
     `;
     const result = await pool.query(query, [
-      id || `msg_${Date.now()}`,
+      id,
       projectId,
       senderId,
       senderName,
-      senderRole || 'researcher',
+      senderRole,
       text,
-      isVoiceNote || false,
-      voiceDurationSeconds || null,
-      timestamp || new Date(),
+      isVoiceNote,
+      voiceDurationSeconds,
+      timestamp,
     ]);
     res.status(201).json(result.rows[0] || req.body);
   } catch (err) {

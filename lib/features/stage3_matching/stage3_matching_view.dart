@@ -131,13 +131,18 @@ class _Stage3MatchingViewState extends ConsumerState<Stage3MatchingView> {
         );
       },
     );
-  }
-
-  @override
+  }  @override
   Widget build(BuildContext context) {
     final state = ref.watch(appStateProvider);
+    final project = state.projects.firstWhere(
+      (p) => p.id == widget.project.id,
+      orElse: () => widget.project,
+    );
+    final isSpecialist = state.activeRole == UserRole.specialist;
     final specialists = state.specialists;
-    final currentRequest = widget.project.specialistRequest;
+    final currentRequest = project.specialistRequest;
+    final assignedDoctor = project.assignedSpecialist;
+    final connectedDoctorName = assignedDoctor?.name ?? currentRequest?.specialistName ?? 'Dr. Test Doctor, MD';
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -159,20 +164,28 @@ class _Stage3MatchingViewState extends ConsumerState<Stage3MatchingView> {
                           color: AppTheme.doctorColor.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Icon(Icons.people_alt_rounded, color: AppTheme.doctorColor, size: 22),
+                        child: Icon(
+                          isSpecialist ? Icons.how_to_reg_rounded : Icons.people_alt_rounded,
+                          color: AppTheme.doctorColor,
+                          size: 22,
+                        ),
                       ),
                       const SizedBox(width: 12),
-                      const Expanded(
+                      Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Stage 03: Specialist & Mentor Matching',
-                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                              isSpecialist
+                                  ? 'Stage 03: Specialist Mentorship & Co-Authorship Gateway'
+                                  : 'Stage 03: Specialist & Mentor Matching',
+                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
                             ),
                             Text(
-                              'Connect with verified clinicians and biostatisticians. They receive your structured PICO brief for review.',
-                              style: TextStyle(fontSize: 11.5, color: AppTheme.textSecondary),
+                              isSpecialist
+                                  ? 'Evaluate research protocol feasibility and join the study process as Clinical Guide & Co-Author.'
+                                  : 'Connect with verified clinical specialists. Connected doctors collaborate with you in Stage 04 Joint Discussion.',
+                              style: const TextStyle(fontSize: 11.5, color: AppTheme.textSecondary),
                             ),
                           ],
                         ),
@@ -183,158 +196,200 @@ class _Stage3MatchingViewState extends ConsumerState<Stage3MatchingView> {
               ),
               const SizedBox(height: 16),
 
-              // Active Request Status Banner (Responsive)
-              if (currentRequest != null) ...[
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final isNarrow = constraints.maxWidth < 420;
-                    return Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: currentRequest.status == RequestStatus.accepted
-                            ? const Color(0xFFECFDF5)
-                            : const Color(0xFFEFF6FF),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: currentRequest.status == RequestStatus.accepted
-                              ? const Color(0xFF6EE7B7)
-                              : const Color(0xFF93C5FD),
+              // -------------------------------------------------------------
+              // DOCTOR / SPECIALIST VIEW: Only show "Join the Process"
+              // -------------------------------------------------------------
+              if (isSpecialist) ...[
+                if (assignedDoctor != null) ...[
+                  // Doctor is already connected/assigned
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFECFDF5),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFF6EE7B7)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.verified_rounded, color: AppTheme.doctorColor, size: 24),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    assignedDoctor.id == state.currentSpecialist.id
+                                        ? 'You are the Assigned Specialist Guide'
+                                        : 'Assigned Specialist: ${assignedDoctor.name}',
+                                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.doctorColor),
+                                  ),
+                                  Text(
+                                    'Actively mentoring ${project.ownerName} on ${project.clinicalArea}',
+                                    style: const TextStyle(fontSize: 12, color: AppTheme.textPrimary),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
+                        const SizedBox(height: 14),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              ref.read(appStateProvider.notifier).advanceStage(
+                                    project.id,
+                                    ProjectStage.jointDiscussion,
+                                  );
+                            },
+                            icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),
+                            label: const Text('Open Joint Discussion & Chat (Stage 04)'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.doctorColor,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ] else ...[
+                  // Study is awaiting specialist: Show "Join the Process"
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(18),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
                             children: [
-                              Icon(
-                                currentRequest.status == RequestStatus.accepted
-                                    ? Icons.check_circle_rounded
-                                    : Icons.hourglass_top_rounded,
-                                color: currentRequest.status == RequestStatus.accepted
-                                    ? AppTheme.doctorColor
-                                    : AppTheme.researcherColor,
-                                size: 22,
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.doctorColor.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(Icons.handshake_rounded, color: AppTheme.doctorColor, size: 24),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(
-                                      'Request Status: ${currentRequest.status.name.toUpperCase()}',
-                                      style: TextStyle(
-                                        fontSize: 12.5,
-                                        fontWeight: FontWeight.w700,
-                                        color: currentRequest.status == RequestStatus.accepted
-                                            ? AppTheme.doctorColor
-                                            : AppTheme.researcherColor,
-                                      ),
+                                    const Text(
+                                      'Join This Study Process',
+                                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
                                     ),
                                     Text(
-                                      'Invited ${currentRequest.specialistName} (${currentRequest.specialty})',
-                                      style: const TextStyle(fontSize: 11.5, color: AppTheme.textPrimary),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
+                                      'Principal Investigator: ${project.ownerName} • Area: ${project.clinicalArea}',
+                                      style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
                                     ),
                                   ],
                                 ),
                               ),
-                              if (!isNarrow && currentRequest.status == RequestStatus.accepted)
-                                ElevatedButton(
-                                  onPressed: () {
-                                    ref.read(appStateProvider.notifier).advanceStage(
-                                          widget.project.id,
-                                          ProjectStage.jointDiscussion,
-                                        );
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppTheme.doctorColor,
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                  ),
-                                  child: const Text('Open Joint Workspace', style: TextStyle(fontSize: 11)),
-                                ),
                             ],
                           ),
-                          if (isNarrow && currentRequest.status == RequestStatus.accepted) ...[
-                            const SizedBox(height: 10),
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton(
-                                onPressed: () {
-                                  ref.read(appStateProvider.notifier).advanceStage(
-                                        widget.project.id,
-                                        ProjectStage.jointDiscussion,
-                                      );
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppTheme.doctorColor,
-                                  padding: const EdgeInsets.symmetric(vertical: 9),
-                                ),
-                                child: const Text('Open Joint Workspace', style: TextStyle(fontSize: 11.5)),
+                          const Divider(height: 24),
+
+                          // Project Brief
+                          const Text('Research Observation', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700)),
+                          const SizedBox(height: 4),
+                          Text(
+                            project.observationText.isNotEmpty ? project.observationText : 'Study focusing on ${project.clinicalArea}',
+                            style: const TextStyle(fontSize: 12, color: AppTheme.textPrimary),
+                          ),
+                          const SizedBox(height: 12),
+
+                          // PICO Parameters
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppTheme.bgSurface,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: AppTheme.borderSubtle),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('PICO Framework Snapshot', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                                const SizedBox(height: 6),
+                                if (project.pico.population.isNotEmpty)
+                                  Text('• Population: ${project.pico.population}', style: const TextStyle(fontSize: 11.5)),
+                                if (project.pico.intervention.isNotEmpty)
+                                  Text('• Intervention: ${project.pico.intervention}', style: const TextStyle(fontSize: 11.5)),
+                                if (project.pico.comparison.isNotEmpty)
+                                  Text('• Comparison: ${project.pico.comparison}', style: const TextStyle(fontSize: 11.5)),
+                                if (project.pico.outcome.isNotEmpty)
+                                  Text('• Primary Outcome: ${project.pico.outcome}', style: const TextStyle(fontSize: 11.5)),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+
+                          // Primary "Join the Process" CTA Button
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                ref.read(appStateProvider.notifier).joinProcessAsSpecialist(project.id);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('You have successfully joined "${project.title}" as Specialist Mentor!'),
+                                    backgroundColor: const Color(0xFF0F766E),
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
+                              },
+                              icon: const Icon(Icons.how_to_reg_rounded, size: 20),
+                              label: const Text(
+                                'Join the Process & Become Specialist Guide',
+                                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.doctorColor,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                               ),
                             ),
-                          ],
+                          ),
                         ],
                       ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 16),
-              ],
-
-              // Filter Chips
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: ['All', 'Cardiovascular Medicine', 'Clinical Epidemiology & Biostatistics', 'Nephrology & Renal Medicine', 'Oncology & Immunotherapy']
-                      .map((specialty) {
-                    final isSelected = _selectedSpecialtyFilter == specialty;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: ChoiceChip(
-                        label: Text(specialty == 'All' ? 'All Specialties' : specialty.split('&').first.trim()),
-                        selected: isSelected,
-                        onSelected: (_) {
-                          setState(() => _selectedSpecialtyFilter = specialty);
-                        },
-                        selectedColor: AppTheme.primaryNavy,
-                        labelStyle: TextStyle(
-                          color: isSelected ? Colors.white : AppTheme.textPrimary,
-                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                          fontSize: 11.5,
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ),
-              const SizedBox(height: 14),
-
-              // Specialist Cards (Responsive across mobile/tablet/desktop)
-              ...specialists
-                  .where((s) => _selectedSpecialtyFilter == 'All' || s.specialty == _selectedSpecialtyFilter)
-                  .map((specialist) {
-                final isInvited = currentRequest?.specialistId == specialist.id;
-
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: Padding(
-                    padding: const EdgeInsets.all(14),
+                    ),
+                  ),
+                ],
+              ] else ...[
+                // -------------------------------------------------------------
+                // RESEARCHER VIEW: Show connected doctor or specialist directory
+                // -------------------------------------------------------------
+                if (assignedDoctor != null) ...[
+                  // Connected Doctor Banner
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFECFDF5),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFF6EE7B7)),
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             CircleAvatar(
-                              radius: 20,
-                              backgroundColor: AppTheme.accentCyan.withValues(alpha: 0.12),
+                              radius: 22,
+                              backgroundColor: AppTheme.doctorColor.withValues(alpha: 0.15),
                               child: Text(
-                                specialist.avatarInitials,
-                                style: const TextStyle(fontWeight: FontWeight.w700, color: AppTheme.accentCyan),
+                                assignedDoctor.avatarInitials,
+                                style: const TextStyle(fontWeight: FontWeight.w700, color: AppTheme.doctorColor),
                               ),
                             ),
-                            const SizedBox(width: 10),
+                            const SizedBox(width: 12),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -343,67 +398,228 @@ class _Stage3MatchingViewState extends ConsumerState<Stage3MatchingView> {
                                     children: [
                                       Flexible(
                                         child: Text(
-                                          specialist.name,
-                                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                                          'Connected Specialist: $connectedDoctorName',
+                                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.doctorColor),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
-                                      if (specialist.isVerified) ...[
-                                        const SizedBox(width: 4),
-                                        const Icon(Icons.verified_rounded, size: 14, color: AppTheme.doctorColor),
-                                      ],
+                                      const SizedBox(width: 4),
+                                      const Icon(Icons.verified_rounded, size: 16, color: AppTheme.doctorColor),
                                     ],
                                   ),
-                                  const SizedBox(height: 2),
                                   Text(
-                                    '${specialist.title} • ${specialist.institution}',
-                                    style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+                                    '${assignedDoctor.title} • ${assignedDoctor.institution}',
+                                    style: const TextStyle(fontSize: 11.5, color: AppTheme.textSecondary),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ],
                               ),
                             ),
-                            const SizedBox(width: 8),
-                            ElevatedButton(
-                              onPressed: isInvited ? null : () => _showInviteDialog(specialist),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: isInvited ? Colors.grey.shade400 : AppTheme.primaryNavy,
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                minimumSize: Size.zero,
-                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              ),
-                              child: Text(
-                                isInvited ? 'Requested' : 'Invite',
-                                style: const TextStyle(fontSize: 11),
-                              ),
-                            ),
                           ],
                         ),
-                        const SizedBox(height: 10),
-                        Text(specialist.bio, style: const TextStyle(fontSize: 11.5, color: AppTheme.textSecondary)),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 4,
-                          runSpacing: 4,
-                          children: specialist.researchKeywords.map((kw) {
-                            return Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: AppTheme.bgSurface,
-                                borderRadius: BorderRadius.circular(4),
-                                border: Border.all(color: AppTheme.borderSubtle),
-                              ),
-                              child: Text(kw, style: const TextStyle(fontSize: 10, color: AppTheme.textSecondary)),
-                            );
-                          }).toList(),
+                        const SizedBox(height: 14),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              ref.read(appStateProvider.notifier).advanceStage(
+                                    project.id,
+                                    ProjectStage.jointDiscussion,
+                                  );
+                            },
+                            icon: const Icon(Icons.forum_rounded, size: 18),
+                            label: const Text('Proceed to Stage 04: Joint Discussion & Chat'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primaryNavy,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                          ),
                         ),
                       ],
                     ),
                   ),
-                );
-              }),
+                  const SizedBox(height: 16),
+                ] else if (currentRequest != null) ...[
+                  // Pending Request Status Banner
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: currentRequest.status == RequestStatus.accepted
+                          ? const Color(0xFFECFDF5)
+                          : const Color(0xFFEFF6FF),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: currentRequest.status == RequestStatus.accepted
+                            ? const Color(0xFF6EE7B7)
+                            : const Color(0xFF93C5FD),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          currentRequest.status == RequestStatus.accepted
+                              ? Icons.check_circle_rounded
+                              : Icons.hourglass_top_rounded,
+                          color: currentRequest.status == RequestStatus.accepted
+                              ? AppTheme.doctorColor
+                              : AppTheme.researcherColor,
+                          size: 22,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Request Status: ${currentRequest.status.name.toUpperCase()}',
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: currentRequest.status == RequestStatus.accepted
+                                      ? AppTheme.doctorColor
+                                      : AppTheme.researcherColor,
+                                ),
+                              ),
+                              Text(
+                                'Invited ${currentRequest.specialistName} (${currentRequest.specialty})',
+                                style: const TextStyle(fontSize: 11.5, color: AppTheme.textPrimary),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
+                // Filter Chips
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: ['All', 'Cardiovascular Medicine', 'Clinical Epidemiology & Biostatistics', 'Nephrology & Renal Medicine', 'Oncology & Immunotherapy']
+                        .map((specialty) {
+                      final isSelected = _selectedSpecialtyFilter == specialty;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ChoiceChip(
+                          label: Text(specialty == 'All' ? 'All Specialties' : specialty.split('&').first.trim()),
+                          selected: isSelected,
+                          onSelected: (_) {
+                            setState(() => _selectedSpecialtyFilter = specialty);
+                          },
+                          selectedColor: AppTheme.primaryNavy,
+                          labelStyle: TextStyle(
+                            color: isSelected ? Colors.white : AppTheme.textPrimary,
+                            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                            fontSize: 11.5,
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                // Specialist Cards (Responsive across mobile/tablet/desktop)
+                ...specialists
+                    .where((s) => _selectedSpecialtyFilter == 'All' || s.specialty == _selectedSpecialtyFilter)
+                    .map((specialist) {
+                  final isInvited = currentRequest?.specialistId == specialist.id || assignedDoctor?.id == specialist.id;
+
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              CircleAvatar(
+                                radius: 20,
+                                backgroundColor: AppTheme.accentCyan.withValues(alpha: 0.12),
+                                child: Text(
+                                  specialist.avatarInitials,
+                                  style: const TextStyle(fontWeight: FontWeight.w700, color: AppTheme.accentCyan),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Flexible(
+                                          child: Text(
+                                            specialist.name,
+                                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                        if (specialist.isVerified) ...[
+                                          const SizedBox(width: 4),
+                                          const Icon(Icons.verified_rounded, size: 14, color: AppTheme.doctorColor),
+                                        ],
+                                      ],
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '${specialist.title} • ${specialist.institution}',
+                                      style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              ElevatedButton(
+                                onPressed: isInvited ? null : () => _showInviteDialog(specialist),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: isInvited ? Colors.grey.shade400 : AppTheme.primaryNavy,
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                  minimumSize: Size.zero,
+                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                ),
+                                child: Text(
+                                  isInvited ? (assignedDoctor?.id == specialist.id ? 'Connected' : 'Requested') : 'Invite',
+                                  style: const TextStyle(fontSize: 11),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Text(specialist.bio, style: const TextStyle(fontSize: 11.5, color: AppTheme.textSecondary)),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 4,
+                            runSpacing: 4,
+                            children: specialist.researchKeywords.map((kw) {
+                              return Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.bgSurface,
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(color: AppTheme.borderSubtle),
+                                ),
+                                child: Text(kw, style: const TextStyle(fontSize: 10, color: AppTheme.textSecondary)),
+                              );
+                            }).toList(),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }),
+              ],
             ],
           ),
         ),
