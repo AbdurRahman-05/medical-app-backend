@@ -258,73 +258,314 @@ class _Stage3MatchingViewState extends ConsumerState<Stage3MatchingView> {
                     ),
                   ),
                 ] else ...[
-                  // Study is awaiting specialist: Show "Join the Process"
+                  // Study is awaiting specialist: Show Full Launch Details & PICO Framework
                   Card(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: const BorderSide(color: Color(0xFF6EE7B7), width: 1.2),
+                    ),
+                    color: Colors.white,
                     child: Padding(
-                      padding: const EdgeInsets.all(18),
+                      padding: const EdgeInsets.all(20),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          // Header Status Badge & Action
                           Row(
                             children: [
                               Container(
-                                padding: const EdgeInsets.all(8),
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: AppTheme.doctorColor.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(8),
+                                  color: const Color(0xFFECFDF5),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: const Color(0xFF6EE7B7)),
                                 ),
-                                child: const Icon(Icons.handshake_rounded, color: AppTheme.doctorColor, size: 24),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Text(
-                                      'Join This Study Process',
-                                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-                                    ),
+                                    Icon(Icons.fiber_manual_record_rounded, size: 10, color: AppTheme.doctorColor),
+                                    SizedBox(width: 5),
                                     Text(
-                                      'Principal Investigator: ${project.ownerName} • Area: ${project.clinicalArea}',
-                                      style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                                      'AWAITING SPECIALIST ACCEPTANCE',
+                                      style: TextStyle(
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.w800,
+                                        color: AppTheme.doctorColor,
+                                        letterSpacing: 0.4,
+                                      ),
                                     ),
                                   ],
                                 ),
                               ),
+                              const Spacer(),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primaryNavy,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  project.clinicalArea.isNotEmpty ? project.clinicalArea : 'Cardiology',
+                                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white),
+                                ),
+                              ),
                             ],
                           ),
-                          const Divider(height: 24),
+                          const SizedBox(height: 16),
 
-                          // Project Brief
-                          const Text('Research Observation', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700)),
-                          const SizedBox(height: 4),
+                          // Study Title
                           Text(
-                            project.observationText.isNotEmpty ? project.observationText : 'Study focusing on ${project.clinicalArea}',
-                            style: const TextStyle(fontSize: 12, color: AppTheme.textPrimary),
+                            project.title,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: AppTheme.primaryNavy,
+                              height: 1.25,
+                            ),
                           ),
                           const SizedBox(height: 12),
 
-                          // PICO Parameters
+                          // Principal Investigator Card
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
                               color: AppTheme.bgSurface,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: AppTheme.borderSubtle),
+                            ),
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 18,
+                                  backgroundColor: AppTheme.primaryNavy.withValues(alpha: 0.1),
+                                  child: Text(
+                                    project.ownerName.isNotEmpty
+                                        ? project.ownerName.split(' ').where((s) => s.isNotEmpty).take(2).map((s) => s[0]).join().toUpperCase()
+                                        : 'PI',
+                                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: AppTheme.primaryNavy),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Principal Investigator: ${project.ownerName}',
+                                        style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+                                      ),
+                                      const Text(
+                                        'Academic Medical Center • Department of Internal Medicine',
+                                        style: TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Section 1: Clinical Observation
+                          const Row(
+                            children: [
+                              Icon(Icons.lightbulb_outline_rounded, size: 16, color: AppTheme.accentTeal),
+                              SizedBox(width: 6),
+                              Text('Clinical Problem & Observation', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF8FAFC),
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(color: AppTheme.borderSubtle),
                             ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                            child: Text(
+                              project.observationText.isNotEmpty
+                                  ? project.observationText
+                                  : 'Clinical query focusing on treatment response and patient outcomes in ${project.clinicalArea}.',
+                              style: const TextStyle(fontSize: 12.5, height: 1.4, color: AppTheme.textPrimary),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Section 2: AI-Refined Research Question & Evidence Clarity
+                          Row(
+                            children: [
+                              const Icon(Icons.psychology_outlined, size: 16, color: AppTheme.doctorColor),
+                              const SizedBox(width: 6),
+                              const Expanded(
+                                child: Text('Synthesized Research Question', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.doctorColor.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  '${project.clarityScore.toInt()}% Clarity Score',
+                                  style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: AppTheme.doctorColor),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFECFDF5).withValues(alpha: 0.6),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: const Color(0xFF6EE7B7)),
+                            ),
+                            child: Text(
+                              project.aiClarifiedQuestion.isNotEmpty ? project.aiClarifiedQuestion : project.title,
+                              style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppTheme.primaryNavy, height: 1.4),
+                            ),
+                          ),
+                          const SizedBox(height: 18),
+
+                          // Section 3: Comprehensive 6-Pillar PICO Clinical Framework
+                          Row(
+                            children: [
+                              const Icon(Icons.view_module_rounded, size: 16, color: AppTheme.primaryNavy),
+                              const SizedBox(width: 6),
+                              const Text('PICO Clinical Framework Parameters', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                              const Spacer(),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: project.pico.isConfirmed ? const Color(0xFFECFDF5) : const Color(0xFFEFF6FF),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  project.pico.isConfirmed ? 'Structured & Validated' : 'Pre-Structured',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                    color: project.pico.isConfirmed ? AppTheme.doctorColor : AppTheme.researcherColor,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+
+                          // PICO Grid Tiles
+                          _buildPicoDetailTile(
+                            letter: 'P',
+                            title: 'Target Population / Cohort',
+                            content: project.pico.population.isNotEmpty
+                                ? project.pico.population
+                                : 'Patients meeting inclusion criteria for ${project.clinicalArea}',
+                            color: const Color(0xFF0284C7),
+                            icon: Icons.people_alt_outlined,
+                          ),
+                          const SizedBox(height: 6),
+                          _buildPicoDetailTile(
+                            letter: 'I',
+                            title: 'Intervention / Clinical Protocol',
+                            content: project.pico.intervention.isNotEmpty
+                                ? project.pico.intervention
+                                : 'Experimental therapeutic regimen / protocolized intervention',
+                            color: const Color(0xFF0F766E),
+                            icon: Icons.medication_outlined,
+                          ),
+                          const SizedBox(height: 6),
+                          _buildPicoDetailTile(
+                            letter: 'C',
+                            title: 'Comparison / Control Group',
+                            content: project.pico.comparison.isNotEmpty
+                                ? project.pico.comparison
+                                : 'Standard guideline-directed medical therapy or historical controls',
+                            color: const Color(0xFFD97706),
+                            icon: Icons.compare_arrows_rounded,
+                          ),
+                          const SizedBox(height: 6),
+                          _buildPicoDetailTile(
+                            letter: 'O',
+                            title: 'Primary & Secondary Outcomes',
+                            content: project.pico.outcome.isNotEmpty
+                                ? project.pico.outcome
+                                : 'Primary efficacy endpoints and biomarker changes',
+                            color: const Color(0xFF10B981),
+                            icon: Icons.flag_outlined,
+                          ),
+                          const SizedBox(height: 6),
+                          _buildPicoDetailTile(
+                            letter: 'T',
+                            title: 'Study Timeframe & Duration',
+                            content: project.pico.timeframe.isNotEmpty
+                                ? project.pico.timeframe
+                                : '12 - 24 months clinical evaluation & prospective follow-up',
+                            color: const Color(0xFF8B5CF6),
+                            icon: Icons.timer_outlined,
+                          ),
+                          const SizedBox(height: 6),
+                          _buildPicoDetailTile(
+                            letter: 'S',
+                            title: 'Clinical Setting & Site Access',
+                            content: project.pico.setting.isNotEmpty
+                                ? project.pico.setting
+                                : 'Tertiary Academic Health Sciences Center & Specialist OPD',
+                            color: const Color(0xFF64748B),
+                            icon: Icons.local_hospital_outlined,
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Section 4: MeSH Medical Subject Keywords
+                          if (project.meshKeywords.isNotEmpty) ...[
+                            const Row(
                               children: [
-                                const Text('PICO Framework Snapshot', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
-                                const SizedBox(height: 6),
-                                if (project.pico.population.isNotEmpty)
-                                  Text('• Population: ${project.pico.population}', style: const TextStyle(fontSize: 11.5)),
-                                if (project.pico.intervention.isNotEmpty)
-                                  Text('• Intervention: ${project.pico.intervention}', style: const TextStyle(fontSize: 11.5)),
-                                if (project.pico.comparison.isNotEmpty)
-                                  Text('• Comparison: ${project.pico.comparison}', style: const TextStyle(fontSize: 11.5)),
-                                if (project.pico.outcome.isNotEmpty)
-                                  Text('• Primary Outcome: ${project.pico.outcome}', style: const TextStyle(fontSize: 11.5)),
+                                Icon(Icons.tag_rounded, size: 15, color: AppTheme.textSecondary),
+                                SizedBox(width: 5),
+                                Text('MeSH Medical Subject Headings', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 6,
+                              children: project.meshKeywords.map((kw) {
+                                return Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.bgSurface,
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(color: AppTheme.borderSubtle),
+                                  ),
+                                  child: Text(
+                                    kw,
+                                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                            const SizedBox(height: 20),
+                          ],
+
+                          // Explanatory Guidance Banner
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEFF6FF),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: const Color(0xFFBFDBFE)),
+                            ),
+                            child: const Row(
+                              children: [
+                                Icon(Icons.info_outline_rounded, size: 18, color: AppTheme.researcherColor),
+                                SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Accepting assigns you as active Specialist Mentor & Co-Author, immediately unlocking Stage 04: Joint Discussion, chat collaboration, and protocol co-creation.',
+                                    style: TextStyle(fontSize: 11.5, color: Color(0xFF1E3A8A), height: 1.3),
+                                  ),
+                                ),
                               ],
                             ),
                           ),
@@ -338,22 +579,23 @@ class _Stage3MatchingViewState extends ConsumerState<Stage3MatchingView> {
                                 ref.read(appStateProvider.notifier).joinProcessAsSpecialist(project.id);
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    content: Text('You have successfully joined "${project.title}" as Specialist Mentor!'),
+                                    content: Text('You have successfully accepted & joined "${project.title}" as Specialist Mentor!'),
                                     backgroundColor: const Color(0xFF0F766E),
                                     behavior: SnackBarBehavior.floating,
                                   ),
                                 );
                               },
-                              icon: const Icon(Icons.how_to_reg_rounded, size: 20),
+                              icon: const Icon(Icons.handshake_rounded, size: 20),
                               label: const Text(
-                                'Join the Process & Become Specialist Guide',
-                                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                                'Accept Mentorship & Join Study Process',
+                                style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800),
                               ),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppTheme.doctorColor,
                                 foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                padding: const EdgeInsets.symmetric(vertical: 15),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                elevation: 2,
                               ),
                             ),
                           ),
@@ -626,4 +868,79 @@ class _Stage3MatchingViewState extends ConsumerState<Stage3MatchingView> {
       ),
     );
   }
+
+  Widget _buildPicoDetailTile({
+    required String letter,
+    required String title,
+    required String content,
+    required Color color,
+    required IconData icon,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: AppTheme.bgSurface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppTheme.borderSubtle),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: color.withValues(alpha: 0.3)),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              letter,
+              style: TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 13,
+                color: color,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(icon, size: 13, color: color),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: color,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  content,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: AppTheme.textPrimary,
+                    height: 1.35,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
+
