@@ -9,6 +9,7 @@ import '../../shared/widgets/innovative_nav_bar.dart';
 import '../../shared/widgets/role_header_bar.dart';
 import '../auth/login_screen.dart';
 import '../project_detail/project_workspace_screen.dart';
+import '../../shared/widgets/shimmer_loading.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -503,7 +504,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
               const SizedBox(height: 10),
 
-              if (filteredProjects.isEmpty)
+              if (state.isSyncing && filteredProjects.isEmpty)
+                const ShimmerProjectList(itemCount: 3)
+              else if (filteredProjects.isEmpty)
                 Card(
                   color: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
