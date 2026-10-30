@@ -6,12 +6,14 @@ import '../../core/theme/app_theme.dart';
 class StageStepperBar extends ConsumerWidget {
   final ProjectStage activeStage;
   final String projectId;
+  final ProjectStage? projectCurrentStage;
   final ValueChanged<ProjectStage> onStageSelected;
 
   const StageStepperBar({
     super.key,
     required this.activeStage,
     required this.projectId,
+    this.projectCurrentStage,
     required this.onStageSelected,
   });
 
@@ -79,14 +81,27 @@ class StageStepperBar extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Row(
               children: stages.map((stage) {
+                final currentReached = projectCurrentStage ?? activeStage;
                 final isCurrent = stage == activeStage;
-                final isCompleted = stage.stepNumber < activeStage.stepNumber;
-                final isLocked = stage.stepNumber > activeStage.stepNumber;
+                final isCompleted = stage.stepNumber < currentReached.stepNumber;
+                final isLocked = stage.stepNumber > currentReached.stepNumber;
 
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4),
                   child: InkWell(
                     onTap: () {
+                      if (isLocked) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Stage 0${stage.stepNumber} (${stage.title}) is locked until Stage 0${currentReached.stepNumber} is completed.',
+                            ),
+                            behavior: SnackBarBehavior.floating,
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                        return;
+                      }
                       onStageSelected(stage);
                     },
                     borderRadius: BorderRadius.circular(8),

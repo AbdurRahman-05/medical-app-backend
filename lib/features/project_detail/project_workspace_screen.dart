@@ -129,6 +129,7 @@ class _ProjectWorkspaceScreenState extends ConsumerState<ProjectWorkspaceScreen>
           StageStepperBar(
             activeStage: currentStage,
             projectId: project.id,
+            projectCurrentStage: project.currentStage,
             onStageSelected: (stage) {
               setState(() {
                 _viewingStageOverride = stage;

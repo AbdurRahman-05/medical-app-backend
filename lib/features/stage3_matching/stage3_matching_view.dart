@@ -273,31 +273,37 @@ class _Stage3MatchingViewState extends ConsumerState<Stage3MatchingView> {
                           // Header Status Badge & Action
                           Row(
                             children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFECFDF5),
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(color: const Color(0xFF6EE7B7)),
-                                ),
-                                child: const Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(Icons.fiber_manual_record_rounded, size: 10, color: AppTheme.doctorColor),
-                                    SizedBox(width: 5),
-                                    Text(
-                                      'AWAITING SPECIALIST ACCEPTANCE',
-                                      style: TextStyle(
-                                        fontSize: 10.5,
-                                        fontWeight: FontWeight.w800,
-                                        color: AppTheme.doctorColor,
-                                        letterSpacing: 0.4,
+                              Flexible(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFECFDF5),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(color: const Color(0xFF6EE7B7)),
+                                  ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.fiber_manual_record_rounded, size: 10, color: AppTheme.doctorColor),
+                                      SizedBox(width: 5),
+                                      Flexible(
+                                        child: Text(
+                                          'AWAITING SPECIALIST ACCEPTANCE',
+                                          style: TextStyle(
+                                            fontSize: 10.5,
+                                            fontWeight: FontWeight.w800,
+                                            color: AppTheme.doctorColor,
+                                            letterSpacing: 0.4,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               ),
-                              const Spacer(),
+                              const SizedBox(width: 8),
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
@@ -434,8 +440,14 @@ class _Stage3MatchingViewState extends ConsumerState<Stage3MatchingView> {
                             children: [
                               const Icon(Icons.view_module_rounded, size: 16, color: AppTheme.primaryNavy),
                               const SizedBox(width: 6),
-                              const Text('PICO Clinical Framework Parameters', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
-                              const Spacer(),
+                              const Expanded(
+                                child: Text(
+                                  'PICO Clinical Framework Parameters',
+                                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(

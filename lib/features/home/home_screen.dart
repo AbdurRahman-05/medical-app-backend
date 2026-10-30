@@ -172,30 +172,38 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
                     child: Row(
                       children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: isAssigned ? AppTheme.primaryNavy : AppTheme.doctorColor,
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            isAssigned
-                                ? (isMyCollab ? 'YOUR CO-AUTHORED STUDY' : 'MENTORED STUDY')
-                                : 'STUDY LAUNCH PROPOSAL',
-                            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: 0.5),
+                        Flexible(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: isAssigned ? AppTheme.primaryNavy : AppTheme.doctorColor,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              isAssigned
+                                  ? (isMyCollab ? 'YOUR CO-AUTHORED STUDY' : 'MENTORED STUDY')
+                                  : 'STUDY LAUNCH PROPOSAL',
+                              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: 0.5),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AppTheme.bgSurface,
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: AppTheme.borderSubtle),
-                          ),
-                          child: Text(
-                            p.clinicalArea.isNotEmpty ? p.clinicalArea : 'Cardiology',
-                            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppTheme.primaryNavy),
+                        Flexible(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppTheme.bgSurface,
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: AppTheme.borderSubtle),
+                            ),
+                            child: Text(
+                              p.clinicalArea.isNotEmpty ? p.clinicalArea : 'Cardiology',
+                              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppTheme.primaryNavy),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                         ),
                         const Spacer(),
@@ -299,8 +307,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           children: [
                             const Icon(Icons.auto_awesome_rounded, size: 16, color: AppTheme.doctorColor),
                             const SizedBox(width: 6),
-                            const Text('AI-Clarified Research Question', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
-                            const Spacer(),
+                            const Expanded(
+                              child: Text(
+                                'AI-Clarified Research Question',
+                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
@@ -336,8 +350,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           children: [
                             const Icon(Icons.view_module_rounded, size: 16, color: AppTheme.primaryNavy),
                             const SizedBox(width: 6),
-                            const Text('PICO Clinical Framework Parameters', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
-                            const Spacer(),
+                            const Expanded(
+                              child: Text(
+                                'PICO Clinical Framework Parameters',
+                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
@@ -493,11 +513,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             style: OutlinedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 12),
                             ),
-                            child: const Text('Open in Workspace', style: TextStyle(fontSize: 12)),
+                            child: const FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text('Open in Workspace', style: TextStyle(fontSize: 12)),
+                            ),
                           ),
                         ),
                         if (!isAssigned) ...[
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 10),
                           Expanded(
                             flex: 2,
                             child: ElevatedButton.icon(
@@ -513,7 +536,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 _openProject(p.id);
                               },
                               icon: const Icon(Icons.handshake_rounded, size: 16),
-                              label: const Text('Accept Mentorship & Co-Author', style: TextStyle(fontSize: 12)),
+                              label: const FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text('Accept Mentorship & Co-Author', style: TextStyle(fontSize: 12)),
+                              ),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppTheme.doctorColor,
                                 padding: const EdgeInsets.symmetric(vertical: 12),
@@ -1100,16 +1126,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 ),
                               ),
                               const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.bgSurface,
-                                  borderRadius: BorderRadius.circular(4),
-                                  border: Border.all(color: AppTheme.borderSubtle),
-                                ),
-                                child: Text(
-                                  'Stage 0${p.currentStage.stepNumber} · ${p.currentStage.title}',
-                                  style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700, color: AppTheme.primaryNavy),
+                              Flexible(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.bgSurface,
+                                    borderRadius: BorderRadius.circular(4),
+                                    border: Border.all(color: AppTheme.borderSubtle),
+                                  ),
+                                  child: Text(
+                                    'Stage 0${p.currentStage.stepNumber} · ${p.currentStage.title}',
+                                    style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700, color: AppTheme.primaryNavy),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
                               ),
                               const Spacer(),
@@ -1519,61 +1549,66 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget _buildProfileTab(UserProfile user, UserRole role) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Profile Card
-          Card(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            elevation: 0,
-            color: Colors.white,
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                children: [
-                  CircleAvatar(
-                    radius: 36,
-                    backgroundColor: AppTheme.primaryNavy,
-                    child: Text(
-                      user.avatarInitials,
-                      style: GoogleFonts.plusJakartaSans(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.cyanAccent),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    user.name,
-                    style: GoogleFonts.plusJakartaSans(fontSize: 18, fontWeight: FontWeight.w800, color: AppTheme.primaryNavy),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${user.title} • ${user.institution}',
-                    style: const TextStyle(fontSize: 12.5, color: AppTheme.textSecondary),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 10),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppTheme.doctorColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: AppTheme.doctorColor, width: 0.8),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.verified_rounded, size: 14, color: AppTheme.doctorColor),
-                        SizedBox(width: 4),
-                        Text(
-                          'Verified Medical Practitioner',
-                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.doctorColor),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 600),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Profile Card
+              Card(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                elevation: 0,
+                color: Colors.white,
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      CircleAvatar(
+                        radius: 36,
+                        backgroundColor: AppTheme.primaryNavy,
+                        child: Text(
+                          user.avatarInitials,
+                          style: GoogleFonts.plusJakartaSans(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.cyanAccent),
                         ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        user.name,
+                        style: GoogleFonts.plusJakartaSans(fontSize: 18, fontWeight: FontWeight.w800, color: AppTheme.primaryNavy),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${user.title} • ${user.institution}',
+                        style: const TextStyle(fontSize: 12.5, color: AppTheme.textSecondary),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppTheme.doctorColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: AppTheme.doctorColor, width: 0.8),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.verified_rounded, size: 14, color: AppTheme.doctorColor),
+                            SizedBox(width: 4),
+                            Text(
+                              'Verified Medical Practitioner',
+                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.doctorColor),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ),
           const SizedBox(height: 16),
 
           // Clinical Specialty & Keywords
@@ -1684,7 +1719,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           const SizedBox(height: 30),
         ],
       ),
-    );
+    ),
+  ),
+);
   }
 
   Widget _buildHeroBanner(UserProfile user, UserRole role) {
@@ -1703,7 +1740,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
 
     return Container(
-      padding: const EdgeInsets.all(18),
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
@@ -1725,33 +1763,35 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Wrap(
-            alignment: WrapAlignment.spaceBetween,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: 8,
-            runSpacing: 6,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: badgeColor.withValues(alpha: 0.35),
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: badgeColor, width: 0.8),
-                ),
-                child: Text(
-                  badgeText,
-                  style: GoogleFonts.inter(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                    letterSpacing: 0.6,
+              Flexible(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: badgeColor.withValues(alpha: 0.35),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: badgeColor, width: 0.8),
+                  ),
+                  child: Text(
+                    badgeText,
+                    style: GoogleFonts.inter(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                      letterSpacing: 0.6,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ),
-              if (user.isVerified)
-                Row(
+              if (user.isVerified) ...[
+                const SizedBox(width: 8),
+                const Row(
                   mainAxisSize: MainAxisSize.min,
-                  children: const [
+                  children: [
                     Icon(Icons.verified_rounded, size: 14, color: Colors.cyanAccent),
                     SizedBox(width: 4),
                     Text(
@@ -1760,22 +1800,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
                   ],
                 ),
+              ],
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           Text(
             'Welcome, ${user.name}',
             style: GoogleFonts.plusJakartaSans(
-              fontSize: 20,
+              fontSize: 22,
               fontWeight: FontWeight.w800,
               color: Colors.white,
               letterSpacing: -0.3,
             ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 4),
           Text(
             '${user.title} • ${user.institution}',
-            style: const TextStyle(fontSize: 12, color: Colors.white70),
+            style: const TextStyle(fontSize: 12.5, color: Colors.white70),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),

@@ -20,16 +20,19 @@ class Stage8ManuscriptView extends ConsumerWidget {
                 color: AppTheme.accentCyan,
               ),
               const SizedBox(width: 8),
-              Text('Exporting $format Package'),
+              Expanded(
+                child: Text('Exporting $format Package'),
+              ),
             ],
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Your compilation package has been generated successfully.'),
+              const Text('Your compilation package has been generated successfully.'),
               const SizedBox(height: 8),
               Container(
+                width: double.infinity,
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   color: AppTheme.bgSurface,
@@ -38,6 +41,8 @@ class Stage8ManuscriptView extends ConsumerWidget {
                 child: Text(
                   'File: ${(project.title.length > 25 ? project.title.substring(0, 25) : project.title).replaceAll(" ", "_")}_manuscript_${format.toLowerCase()}',
                   style: const TextStyle(fontFamily: 'monospace', fontSize: 11),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               const SizedBox(height: 10),
@@ -120,7 +125,7 @@ class Stage8ManuscriptView extends ConsumerWidget {
                         child: OutlinedButton.icon(
                           onPressed: () => _triggerExport(context, 'PDF'),
                           icon: const Icon(Icons.picture_as_pdf, color: Colors.red, size: 16),
-                          label: const Text('PDF Dossier'),
+                          label: const FittedBox(fit: BoxFit.scaleDown, child: Text('PDF Dossier')),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -128,7 +133,7 @@ class Stage8ManuscriptView extends ConsumerWidget {
                         child: OutlinedButton.icon(
                           onPressed: () => _triggerExport(context, 'DOCX'),
                           icon: const Icon(Icons.description, color: Colors.blue, size: 16),
-                          label: const Text('Word DOCX'),
+                          label: const FittedBox(fit: BoxFit.scaleDown, child: Text('Word DOCX')),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -136,7 +141,7 @@ class Stage8ManuscriptView extends ConsumerWidget {
                         child: OutlinedButton.icon(
                           onPressed: () => _triggerExport(context, 'CSV'),
                           icon: const Icon(Icons.table_chart, color: Colors.green, size: 16),
-                          label: const Text('CRF Template'),
+                          label: const FittedBox(fit: BoxFit.scaleDown, child: Text('CRF Template')),
                         ),
                       ),
                     ],

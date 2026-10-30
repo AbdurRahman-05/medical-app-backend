@@ -39,7 +39,12 @@ class _Stage6ProtocolViewState extends ConsumerState<Stage6ProtocolView> {
                 color: isApproval ? AppTheme.doctorColor : AppTheme.warningOrange,
               ),
               const SizedBox(width: 8),
-              Text(isApproval ? 'Approve Protocol' : 'Request Protocol Revisions'),
+              Expanded(
+                child: Text(
+                  isApproval ? 'Approve Protocol' : 'Request Protocol Revisions',
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           ),
           content: Column(
@@ -172,30 +177,36 @@ class _Stage6ProtocolViewState extends ConsumerState<Stage6ProtocolView> {
               border: Border.all(color: AppTheme.borderSubtle),
             ),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryNavy,
-                        borderRadius: BorderRadius.circular(6),
+                Expanded(
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryNavy,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          latestVersion?.versionTag ?? 'v1.0',
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 12),
+                        ),
                       ),
-                      child: Text(
-                        latestVersion?.versionTag ?? 'v1.0',
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 12),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          latestVersion != null
+                              ? 'Created ${DateFormat('dd MMM yyyy, hh:mm a').format(latestVersion.createdAt)}'
+                              : 'Draft',
+                          style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      latestVersion != null
-                          ? 'Created ${DateFormat('dd MMM yyyy, hh:mm a').format(latestVersion.createdAt)}'
-                          : 'Draft',
-                      style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
@@ -290,6 +301,39 @@ class _Stage6ProtocolViewState extends ConsumerState<Stage6ProtocolView> {
                     ),
                   ],
                 ),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ] else if (!isDoctor && latestVersion?.status != ProtocolStatus.approved) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEFF6FF),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFF93C5FD)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.hourglass_top_rounded, color: Color(0xFF1E3A8A), size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Awaiting Specialist Protocol Sign-Off',
+                          style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Color(0xFF1E3A8A)),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Your co-author doctor (${p.assignedSpecialist?.name ?? "Specialist Mentor"}) has control to review and formally approve this protocol version to unlock Stage 07 (IEC Readiness).',
+                          style: const TextStyle(fontSize: 11.5, color: Color(0xFF1E3A8A), height: 1.3),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 16),

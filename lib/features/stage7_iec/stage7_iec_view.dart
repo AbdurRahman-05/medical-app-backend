@@ -89,12 +89,14 @@ class Stage7IecView extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        'Ethics Package Completion',
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                      const Expanded(
+                        child: Text(
+                          'Ethics Package Completion',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                        ),
                       ),
+                      const SizedBox(width: 8),
                       Text(
                         '$completedCount of $totalCount items verified (${(progress * 100).toInt()}%)',
                         style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.accentTeal),
@@ -135,9 +137,11 @@ class Stage7IecView extends ConsumerWidget {
                 activeColor: AppTheme.doctorColor,
                 title: Row(
                   children: [
-                    Text(
-                      item.title,
-                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                    Expanded(
+                      child: Text(
+                        item.title,
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                      ),
                     ),
                     const SizedBox(width: 8),
                     Container(
@@ -173,12 +177,14 @@ class Stage7IecView extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        'Draft Participant Information Sheet (PIS)',
-                        style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+                      const Expanded(
+                        child: Text(
+                          'Draft Participant Information Sheet (PIS)',
+                          style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+                        ),
                       ),
+                      const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(

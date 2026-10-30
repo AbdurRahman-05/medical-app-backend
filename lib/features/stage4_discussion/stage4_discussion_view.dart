@@ -390,7 +390,115 @@ class _Stage4DiscussionViewState extends ConsumerState<Stage4DiscussionView> wit
                         );
                       },
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 16),
+
+                    // Role-Based Alignment Notice & Direct Endorse Action for Doctor
+                    if (isDoctor && !feasibility.allPassed) ...[
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF0FDF4),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFF86EFAC)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Row(
+                              children: [
+                                Icon(Icons.verified_rounded, size: 16, color: AppTheme.doctorColor),
+                                SizedBox(width: 6),
+                                Text(
+                                  'Doctor Clinical Guide Control',
+                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppTheme.doctorColor),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            const Text(
+                              'As the designated specialist, you evaluate study feasibility. You can endorse all checklist criteria to unlock Stage 05 (Study Plan) for the researcher.',
+                              style: TextStyle(fontSize: 11, color: AppTheme.textPrimary, height: 1.3),
+                            ),
+                            const SizedBox(height: 10),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton.icon(
+                                onPressed: () {
+                                  notifier.updateFeasibility(
+                                    widget.project.id,
+                                    const FeasibilityChecklist(
+                                      sampleAccessConfirmed: true,
+                                      ethicalClearanceFeasible: true,
+                                      measurementToolsAvailable: true,
+                                      timelineRealistic: true,
+                                      specialistEndorsed: true,
+                                    ),
+                                  );
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Feasibility Endorsed! Stage 05 (Study Plan) is now unlocked.'),
+                                      backgroundColor: AppTheme.doctorColor,
+                                      behavior: SnackBarBehavior.floating,
+                                    ),
+                                  );
+                                },
+                                icon: const Icon(Icons.check_circle_rounded, size: 16),
+                                label: const Text('Endorse All Feasibility & Unlock Stage 05'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppTheme.doctorColor,
+                                  padding: const EdgeInsets.symmetric(vertical: 10),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ] else if (!isDoctor && !feasibility.allPassed) ...[
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEFF6FF),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFF93C5FD)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.hourglass_top_rounded, size: 18, color: Color(0xFF1E3A8A)),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Awaiting Specialist Endorsement: Your mentor doctor ($partnerName) reviews feasibility. Once endorsed, Stage 05 will be unlocked for you.',
+                                style: const TextStyle(fontSize: 11.5, color: Color(0xFF1E3A8A), height: 1.3),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ] else ...[
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFECFDF5),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFF6EE7B7)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.check_circle_rounded, size: 18, color: AppTheme.doctorColor),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Feasibility Fully Endorsed! Both Researcher and Doctor can proceed to Stage 05: Study Plan Builder.',
+                                style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppTheme.doctorColor, height: 1.3),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
 
                     // Advance to Stage 05 CTA
                     SizedBox(
